@@ -1,0 +1,40 @@
+name: Sing-box frontend CI
+
+on:
+  push:
+    branches:
+      - singbox
+  pull_request:
+    branches:
+      - singbox
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: singbox-frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run check
+      - run: npm run start:build
+
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: remnawave-frontend-singbox-${{ github.sha }}
+          path: dist
+          retention-days: 14

@@ -258,18 +258,18 @@
     "genericInbound": {
       "title": "Other sing-box inbound",
       "type": "object",
-            "required": ["type", "tag"],
-            "additionalProperties": true,
-            "properties": {
-                "type": {
-                    "type": "string",
-                    "not": {
-                        "enum": ["anytls", "vless", "trojan", "shadowsocks"]
-                    }
-                },
-                "tag": { "$ref": "#/definitions/tag" }
-            }
+      "required": ["type", "tag"],
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "type": "string",
+          "not": {
+            "enum": ["anytls", "vless", "trojan", "shadowsocks"]
+          }
         },
+        "tag": { "$ref": "#/definitions/tag" }
+      }
+    },
     "taggedObject": {
       "type": "object",
       "required": ["type", "tag"],
