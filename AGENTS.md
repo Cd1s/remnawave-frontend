@@ -4,7 +4,7 @@
 
 This is the frontend fork for the Remnawave dual-core project.
 
-- Fork: `Cd1s/frontend`
+- Fork: `Cd1s/remnawave-frontend`
 - Maintained branch: `singbox`
 - Upstream: `remnawave/frontend` branch `main`
 - Artifact: frontend files embedded into the forked backend image
