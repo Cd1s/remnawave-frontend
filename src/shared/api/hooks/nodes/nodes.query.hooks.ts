@@ -1,6 +1,5 @@
 import { createQueryKeys } from '@lukemorales/query-key-factory'
 import {
-    GetAllNodesCommand,
     GetAllNodesTagsCommand,
     GetNodeMetadataCommand,
     GetOneNodeCommand,
@@ -8,6 +7,10 @@ import {
 } from '@remnawave/backend-contract'
 import { keepPreviousData } from '@tanstack/react-query'
 
+import {
+    GetAllNodesWithCoreCommand,
+    GetOneNodeWithCoreCommand
+} from '@shared/api/contracts/core-contract'
 import { sToMs } from '@shared/utils/time-utils'
 
 import { createGetQueryHook, errorHandler } from '../../tsq-helpers'
@@ -31,8 +34,8 @@ export const nodesQueryKeys = createQueryKeys('nodes', {
 })
 
 export const useGetNodes = createGetQueryHook({
-    endpoint: GetAllNodesCommand.TSQ_url,
-    responseSchema: GetAllNodesCommand.ResponseSchema,
+    endpoint: GetAllNodesWithCoreCommand.TSQ_url,
+    responseSchema: GetAllNodesWithCoreCommand.ResponseSchema,
     getQueryKey: () => nodesQueryKeys.getAllNodes.queryKey,
     rQueryParams: {
         refetchOnMount: true,
@@ -42,8 +45,8 @@ export const useGetNodes = createGetQueryHook({
 })
 
 export const useGetNode = createGetQueryHook({
-    endpoint: GetOneNodeCommand.TSQ_url,
-    responseSchema: GetOneNodeCommand.ResponseSchema,
+    endpoint: GetOneNodeWithCoreCommand.TSQ_url,
+    responseSchema: GetOneNodeWithCoreCommand.ResponseSchema,
     routeParamsSchema: GetOneNodeCommand.RequestSchema,
     getQueryKey: ({ route }) => nodesQueryKeys.getNode(route!).queryKey,
     rQueryParams: {

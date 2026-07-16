@@ -3,7 +3,7 @@ import type { editor } from 'monaco-editor'
 import { ConfigEditorActionsFeature } from '@features/dashboard/config-profiles/config-editor-actions'
 import { ConfigValidationFeature } from '@features/dashboard/config-profiles/config-validation'
 import { MonacoSetupFeature } from '@features/dashboard/config-profiles/monaco-setup'
-import { Box, Button, Card, Code, Group, Loader, Paper, Stack } from '@mantine/core'
+import { Badge, Box, Button, Card, Code, Group, Loader, Paper, Stack } from '@mantine/core'
 import { modals } from '@mantine/modals'
 import Editor, { Monaco, useMonaco } from '@monaco-editor/react'
 import clsx from 'clsx'
@@ -16,6 +16,7 @@ import { monacoTheme } from '@shared/constants/monaco-theme/monaco-theme'
 import { usePseudoFullscreen } from '@shared/hooks'
 import { FullscreenToggleButton, fullscreenClasses } from '@shared/ui/fullscreen-toggle-button'
 import { BaseOverlayHeader } from '@shared/ui/overlays/base-overlay-header'
+import { getConfigProfileCoreType, getCoreLabel } from '@shared/utils/core-utils'
 import { preventBackScroll } from '@shared/utils/misc'
 
 import styles from './ConfigEditor.module.css'
@@ -26,6 +27,8 @@ export function ConfigEditorWidget(props: IProps) {
     const monaco = useMonaco()
 
     const { configProfile, isWasmCrashed, isWasmRestarting, onRestartWasm, snippets } = props
+    const coreType = getConfigProfileCoreType(configProfile)
+    const isXray = coreType === 'xray'
 
     const [result, setResult] = useState('')
     const [isConfigValid, setIsConfigValid] = useState(true)
@@ -42,8 +45,8 @@ export function ConfigEditorWidget(props: IProps) {
     useEffect(() => {
         if (!monaco) return
 
-        MonacoSetupFeature.setup(monaco, i18n.language, snippets.snippets)
-    }, [i18n.language, snippets, monaco])
+        MonacoSetupFeature.setup(monaco, i18n.language, snippets.snippets, coreType)
+    }, [coreType, i18n.language, snippets, monaco])
 
     const blocker = useBlocker(
         ({ currentLocation, nextLocation }) =>
@@ -53,11 +56,23 @@ export function ConfigEditorWidget(props: IProps) {
     const snippetMap = new Map(snippets.snippets.map((s) => [s.name, s.snippet]))
 
     useEffect(() => {
-        if (wasWasmRestarting.current && !isWasmRestarting && !isWasmCrashed && editorRef.current) {
-            ConfigValidationFeature.validate(editorRef, setResult, setIsConfigValid, snippetMap)
+        if (
+            isXray &&
+            wasWasmRestarting.current &&
+            !isWasmRestarting &&
+            !isWasmCrashed &&
+            editorRef.current
+        ) {
+            ConfigValidationFeature.validate(
+                editorRef,
+                setResult,
+                setIsConfigValid,
+                snippetMap,
+                coreType
+            )
         }
         wasWasmRestarting.current = isWasmRestarting
-    }, [isWasmRestarting, isWasmCrashed])
+    }, [coreType, isWasmRestarting, isWasmCrashed, isXray])
 
     const handleEditorDidMount = (monaco: Monaco) => {
         monaco.editor.defineTheme('GithubDark', {
@@ -142,12 +157,13 @@ export function ConfigEditorWidget(props: IProps) {
                     defaultLanguage="json"
                     loading={t('config-editor.widget.loading-editor')}
                     onChange={() => {
-                        if (!isWasmCrashed && !isWasmRestarting) {
+                        if (!isXray || (!isWasmCrashed && !isWasmRestarting)) {
                             ConfigValidationFeature.validate(
                                 editorRef,
                                 setResult,
                                 setIsConfigValid,
-                                snippetMap
+                                snippetMap,
+                                coreType
                             )
                         }
                         checkForChanges()
@@ -159,7 +175,8 @@ export function ConfigEditorWidget(props: IProps) {
                             editorRef,
                             setResult,
                             setIsConfigValid,
-                            snippetMap
+                            snippetMap,
+                            coreType
                         )
                     }}
                     options={{
@@ -210,24 +227,32 @@ export function ConfigEditorWidget(props: IProps) {
 
             <Card className={styles.footer} h="auto" m="0" pos="sticky">
                 <Stack gap="md">
-                    {(result || isWasmRestarting || isWasmCrashed) && (
+                    <Group justify="space-between">
+                        <Badge color={isXray ? 'violet' : 'orange'} variant="light">
+                            {getCoreLabel(coreType)} core
+                        </Badge>
+                    </Group>
+
+                    {(result || (isXray && (isWasmRestarting || isWasmCrashed))) && (
                         <Paper
                             className={styles.validationMessage}
                             p="md"
                             radius="sm"
                             style={{
                                 backgroundColor:
-                                    isWasmCrashed || isWasmRestarting || !isConfigValid
+                                    (isXray && (isWasmCrashed || isWasmRestarting)) ||
+                                    !isConfigValid
                                         ? 'rgba(241, 65, 65, 0.1)'
                                         : 'rgba(51, 171, 132, 0.1)',
                                 border: `1px solid ${
-                                    isWasmCrashed || isWasmRestarting || !isConfigValid
+                                    (isXray && (isWasmCrashed || isWasmRestarting)) ||
+                                    !isConfigValid
                                         ? 'rgb(241, 65, 65)'
                                         : 'rgb(51, 171, 132)'
                                 }`
                             }}
                         >
-                            {isWasmRestarting && (
+                            {isXray && isWasmRestarting && (
                                 <Group gap="xs">
                                     <Loader color="orange" size="xs" />
                                     <Code
@@ -242,7 +267,7 @@ export function ConfigEditorWidget(props: IProps) {
                                     </Code>
                                 </Group>
                             )}
-                            {!isWasmRestarting && isWasmCrashed && (
+                            {isXray && !isWasmRestarting && isWasmCrashed && (
                                 <Group gap="sm">
                                     <Code
                                         color="red"
@@ -264,7 +289,7 @@ export function ConfigEditorWidget(props: IProps) {
                                     </Button>
                                 </Group>
                             )}
-                            {!isWasmRestarting && !isWasmCrashed && (
+                            {(!isXray || (!isWasmRestarting && !isWasmCrashed)) && (
                                 <Code
                                     color={isConfigValid ? 'teal' : 'red'}
                                     style={{

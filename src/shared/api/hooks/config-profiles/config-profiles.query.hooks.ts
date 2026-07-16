@@ -2,10 +2,13 @@ import { createQueryKeys } from '@lukemorales/query-key-factory'
 import {
     GetComputedConfigProfileByUuidCommand,
     GetConfigProfileByUuidCommand,
-    GetConfigProfilesCommand,
     GetInboundsByProfileUuidCommand
 } from '@remnawave/backend-contract'
 
+import {
+    GetConfigProfileByUuidWithCoreCommand,
+    GetConfigProfilesWithCoreCommand
+} from '@shared/api/contracts/core-contract'
 import { sToMs } from '@shared/utils/time-utils'
 
 import { createGetQueryHook, errorHandler } from '../../tsq-helpers'
@@ -26,8 +29,8 @@ export const configProfilesQueryKeys = createQueryKeys('configProfiles', {
 })
 
 export const useGetConfigProfiles = createGetQueryHook({
-    endpoint: GetConfigProfilesCommand.TSQ_url,
-    responseSchema: GetConfigProfilesCommand.ResponseSchema,
+    endpoint: GetConfigProfilesWithCoreCommand.TSQ_url,
+    responseSchema: GetConfigProfilesWithCoreCommand.ResponseSchema,
     getQueryKey: () => configProfilesQueryKeys.getConfigProfiles.queryKey,
     rQueryParams: {
         refetchOnMount: true,
@@ -37,8 +40,8 @@ export const useGetConfigProfiles = createGetQueryHook({
 })
 
 export const useGetConfigProfile = createGetQueryHook({
-    endpoint: GetConfigProfileByUuidCommand.TSQ_url,
-    responseSchema: GetConfigProfileByUuidCommand.ResponseSchema,
+    endpoint: GetConfigProfileByUuidWithCoreCommand.TSQ_url,
+    responseSchema: GetConfigProfileByUuidWithCoreCommand.ResponseSchema,
     routeParamsSchema: GetConfigProfileByUuidCommand.RequestSchema,
     getQueryKey: ({ route }) => configProfilesQueryKeys.getConfigProfile(route!).queryKey,
     rQueryParams: {

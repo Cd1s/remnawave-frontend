@@ -1,0 +1,297 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "sing-box 1.13 configuration",
+  "description": "Focused Remnawave schema for sing-box server profiles. Unknown sing-box fields remain allowed.",
+  "type": "object",
+  "required": ["inbounds"],
+  "additionalProperties": true,
+  "properties": {
+    "log": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "disabled": { "type": "boolean" },
+        "level": {
+          "enum": ["trace", "debug", "info", "warn", "error", "fatal", "panic"]
+        },
+        "timestamp": { "type": "boolean" }
+      }
+    },
+    "inbounds": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          { "$ref": "#/definitions/anyTlsInbound" },
+          { "$ref": "#/definitions/vlessInbound" },
+          { "$ref": "#/definitions/trojanInbound" },
+          { "$ref": "#/definitions/shadowsocksInbound" },
+          { "$ref": "#/definitions/genericInbound" }
+        ]
+      }
+    },
+    "outbounds": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/taggedObject" }
+    },
+    "route": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "rules": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/snippetObject" }
+        },
+        "rule_set": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/snippetObject" }
+        }
+      }
+    },
+    "experimental": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "definitions": {
+    "tag": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^,]+$",
+      "description": "Inbound tags must be unique and cannot contain commas."
+    },
+    "listenFields": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "listen": { "type": "string" },
+        "listen_port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "tcp_fast_open": { "type": "boolean" },
+        "tcp_multi_path": { "type": "boolean" },
+        "udp_fragment": { "type": "boolean" }
+      }
+    },
+    "tlsInbound": {
+      "type": "object",
+      "required": ["enabled"],
+      "additionalProperties": true,
+      "properties": {
+        "enabled": { "const": true },
+        "server_name": { "type": "string" },
+        "alpn": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "certificate": {
+          "oneOf": [
+            { "type": "string" },
+            {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          ]
+        },
+        "certificate_path": { "type": "string" },
+        "key": {
+          "oneOf": [
+            { "type": "string" },
+            {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          ]
+        },
+        "key_path": { "type": "string" }
+      }
+    },
+    "userPassword": {
+      "type": "object",
+      "required": ["password"],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Managed by Remnawave when users are injected."
+        },
+        "password": {
+          "type": "string",
+          "description": "Managed by Remnawave when users are injected."
+        }
+      }
+    },
+    "userUuid": {
+      "type": "object",
+      "required": ["uuid"],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Managed by Remnawave when users are injected."
+        },
+        "uuid": {
+          "type": "string",
+          "description": "Managed by Remnawave when users are injected."
+        },
+        "flow": { "type": "string" }
+      }
+    },
+    "transport": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "enum": ["http", "ws", "quic", "grpc", "httpupgrade"]
+        },
+        "host": {
+          "oneOf": [
+            { "type": "string" },
+            {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          ]
+        },
+        "path": { "type": "string" },
+        "headers": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "service_name": { "type": "string" }
+      }
+    },
+    "anyTlsInbound": {
+      "title": "AnyTLS inbound",
+      "type": "object",
+      "required": ["type", "tag", "listen_port", "users", "tls"],
+      "additionalProperties": true,
+      "properties": {
+        "type": { "const": "anytls" },
+        "tag": { "$ref": "#/definitions/tag" },
+        "listen": { "type": "string" },
+        "listen_port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "users": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/userPassword" },
+          "description": "Keep empty in the profile; Remnawave injects active users."
+        },
+        "padding_scheme": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "tls": { "$ref": "#/definitions/tlsInbound" }
+      }
+    },
+    "vlessInbound": {
+      "title": "VLESS inbound",
+      "type": "object",
+      "required": ["type", "tag", "listen_port", "users"],
+      "additionalProperties": true,
+      "properties": {
+        "type": { "const": "vless" },
+        "tag": { "$ref": "#/definitions/tag" },
+        "listen": { "type": "string" },
+        "listen_port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "users": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/userUuid" }
+        },
+        "tls": { "$ref": "#/definitions/tlsInbound" },
+        "transport": { "$ref": "#/definitions/transport" }
+      }
+    },
+    "trojanInbound": {
+      "title": "Trojan inbound",
+      "type": "object",
+      "required": ["type", "tag", "listen_port", "users"],
+      "additionalProperties": true,
+      "properties": {
+        "type": { "const": "trojan" },
+        "tag": { "$ref": "#/definitions/tag" },
+        "listen": { "type": "string" },
+        "listen_port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "users": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/userPassword" }
+        },
+        "tls": { "$ref": "#/definitions/tlsInbound" },
+        "transport": { "$ref": "#/definitions/transport" }
+      }
+    },
+    "shadowsocksInbound": {
+      "title": "Shadowsocks inbound",
+      "type": "object",
+      "required": ["type", "tag", "listen_port", "method", "users"],
+      "additionalProperties": true,
+      "properties": {
+        "type": { "const": "shadowsocks" },
+        "tag": { "$ref": "#/definitions/tag" },
+        "listen": { "type": "string" },
+        "listen_port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "method": { "type": "string" },
+        "users": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/userPassword" }
+        }
+      }
+    },
+    "genericInbound": {
+      "title": "Other sing-box inbound",
+      "type": "object",
+            "required": ["type", "tag"],
+            "additionalProperties": true,
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "not": {
+                        "enum": ["anytls", "vless", "trojan", "shadowsocks"]
+                    }
+                },
+                "tag": { "$ref": "#/definitions/tag" }
+            }
+        },
+    "taggedObject": {
+      "type": "object",
+      "required": ["type", "tag"],
+      "additionalProperties": true,
+      "properties": {
+        "type": { "type": "string" },
+        "tag": { "type": "string" },
+        "snippet": {
+          "type": "string",
+          "description": "Optional Remnawave snippet reference."
+        }
+      }
+    },
+    "snippetObject": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "snippet": {
+          "type": "string",
+          "description": "Optional Remnawave snippet reference."
+        }
+      }
+    }
+  }
+}

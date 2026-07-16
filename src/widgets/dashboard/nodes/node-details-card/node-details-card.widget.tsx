@@ -31,10 +31,16 @@ import { TbJson, TbPower, TbWifi, TbWifiOff } from 'react-icons/tb'
 import { queryClient } from '@shared/api'
 import { QueryKeys, useDisableNode, useEnableNode, useGetNodeMetadata } from '@shared/api/hooks'
 import { Logo } from '@shared/ui'
-import { XrayLogo } from '@shared/ui/logos'
+import { CoreLogo } from '@shared/ui/core-logo'
 import { BaseOverlayHeader } from '@shared/ui/overlays/base-overlay-header'
 import { SectionCard } from '@shared/ui/section-card'
 import { prettifyBytesUtil } from '@shared/utils/bytes'
+import {
+    getCoreLabel,
+    getNodeCoreType,
+    getNodeCoreUptime,
+    getNodeCoreVersion
+} from '@shared/utils/core-utils'
 import { getNodeResetDaysUtil, getXrayUptimeUtil } from '@shared/utils/time-utils'
 
 interface IProps {
@@ -43,6 +49,10 @@ interface IProps {
 
 export const NodeDetailsCardWidget = memo((props: IProps) => {
     const { node } = props
+    const coreType = getNodeCoreType(node)
+    const coreLabel = getCoreLabel(coreType)
+    const coreVersion = getNodeCoreVersion(node)
+    const coreUptime = getNodeCoreUptime(node)
 
     const { t } = useTranslation()
 
@@ -158,18 +168,16 @@ export const NodeDetailsCardWidget = memo((props: IProps) => {
 
                     <Group gap="xs">
                         {node.isConnected && (
-                            <Tooltip
-                                label={t('node-stats.card.represents-the-uptime-of-the-xray-core')}
-                            >
+                            <Tooltip label={`${coreLabel} core uptime`}>
                                 <Badge
                                     color="teal"
                                     h={28}
-                                    leftSection={<XrayLogo size={14} />}
+                                    leftSection={<CoreLogo coreType={coreType} size={14} />}
                                     size="lg"
                                     variant="light"
                                     visibleFrom="sm"
                                 >
-                                    {getXrayUptimeUtil(node.xrayUptime)}
+                                    {getXrayUptimeUtil(coreUptime)}
                                 </Badge>
                             </Tooltip>
                         )}
@@ -399,18 +407,22 @@ export const NodeDetailsCardWidget = memo((props: IProps) => {
                                     border: '1px solid rgba(139, 92, 246, 0.2)'
                                 }}
                             >
-                                <Tooltip label={t('node-details-card.widget.xray-core-version')}>
+                                <Tooltip label={`${coreLabel} core version`}>
                                     <Group gap="xs" justify="center">
-                                        <XrayLogo color="var(--mantine-color-violet-5)" size={16} />
+                                        <CoreLogo
+                                            color="var(--mantine-color-violet-5)"
+                                            coreType={coreType}
+                                            size={16}
+                                        />
                                         <Text c="violet.5" fw={600} size="sm">
-                                            {node.versions.xray}
+                                            {coreVersion}
                                         </Text>
                                     </Group>
                                 </Tooltip>
                             </Paper>
                         )}
 
-                        {node.xrayUptime !== 0 && (
+                        {coreUptime !== 0 && (
                             <Paper
                                 hiddenFrom="sm"
                                 p="xs"
@@ -420,20 +432,20 @@ export const NodeDetailsCardWidget = memo((props: IProps) => {
                                     border: '1px solid rgba(20, 184, 166, 0.2)' // teal-500 at 20%
                                 }}
                             >
-                                <Tooltip
-                                    label={t(
-                                        'node-stats.card.represents-the-uptime-of-the-xray-core'
-                                    )}
-                                >
+                                <Tooltip label={`${coreLabel} core uptime`}>
                                     <Group gap="xs" justify="center">
-                                        <XrayLogo color="var(--mantine-color-teal-5)" size={16} />
+                                        <CoreLogo
+                                            color="var(--mantine-color-teal-5)"
+                                            coreType={coreType}
+                                            size={16}
+                                        />
                                         <Text
                                             c="teal.5"
                                             fw={600}
                                             size="sm"
                                             style={{ textTransform: 'uppercase' }}
                                         >
-                                            {getXrayUptimeUtil(node.xrayUptime)}
+                                            {getXrayUptimeUtil(coreUptime)}
                                         </Text>
                                     </Group>
                                 </Tooltip>

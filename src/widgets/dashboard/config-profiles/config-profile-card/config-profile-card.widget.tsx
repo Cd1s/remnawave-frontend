@@ -11,9 +11,10 @@ import { generatePath, useNavigate } from 'react-router'
 import { useGetComputedConfigProfile } from '@shared/api/hooks/config-profiles/config-profiles.query.hooks'
 import { ROUTES } from '@shared/constants'
 import { WithDndSortable } from '@shared/hocs/with-dnd-sortable'
+import { CoreLogo } from '@shared/ui/core-logo'
 import { EntityCardShared } from '@shared/ui/entity-card'
-import { XrayLogo } from '@shared/ui/logos'
 import { BaseOverlayHeader } from '@shared/ui/overlays/base-overlay-header'
+import { getConfigProfileCoreType, getCoreLabel } from '@shared/utils/core-utils'
 import { formatInt } from '@shared/utils/misc'
 
 import { MODALS, useModalsStoreOpenWithData } from '@entities/dashboard/modal-store'
@@ -35,6 +36,8 @@ export function ConfigProfileCardWidget(props: IProps) {
     const nodesCount = configProfile.nodes.length
     const inboundsCount = configProfile.inbounds.length
     const isActive = nodesCount > 0
+    const coreType = getConfigProfileCoreType(configProfile)
+    const coreLabel = getCoreLabel(coreType)
 
     const handleEditConfigProfile = () => {
         navigate(
@@ -142,10 +145,17 @@ export function ConfigProfileCardWidget(props: IProps) {
             <EntityCardShared.Root withTopAccent={isActive}>
                 <EntityCardShared.Header>
                     <EntityCardShared.Icon highlight={isActive} onClick={handleEditConfigProfile}>
-                        <XrayLogo size={28} />
+                        <CoreLogo coreType={coreType} size={28} />
                     </EntityCardShared.Icon>
                     <EntityCardShared.Content title={configProfile.name}>
                         <Group gap="xs" wrap="nowrap">
+                            <Badge
+                                color={coreType === 'singbox' ? 'orange' : 'violet'}
+                                variant="soft"
+                            >
+                                {coreLabel}
+                            </Badge>
+
                             <Tooltip label={t('config-profiles-grid.widget.inbounds')}>
                                 <Badge
                                     color="blue"
@@ -196,7 +206,7 @@ export function ConfigProfileCardWidget(props: IProps) {
                         leftSection={<TbEdit size={16} />}
                         onClick={handleEditConfigProfile}
                     >
-                        {t('config-profiles-grid.widget.xray-config')}
+                        {coreLabel} config
                     </EntityCardShared.Button>
                     <EntityCardShared.Menu>
                         <Menu.Item

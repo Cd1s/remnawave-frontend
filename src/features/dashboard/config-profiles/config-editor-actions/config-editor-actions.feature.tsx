@@ -2,7 +2,6 @@ import { ActionIcon, Button, CopyButton, Group, Menu, Text } from '@mantine/core
 import { useClipboard, useDisclosure } from '@mantine/hooks'
 import { modals } from '@mantine/modals'
 import { notifications } from '@mantine/notifications'
-import { UpdateConfigProfileCommand } from '@remnawave/backend-contract'
 import { KeypairGeneratorWidget } from '@widgets/dashboard/config-profiles/keypair-generator/keypair-generator.widget'
 import consola from 'consola/browser'
 import { useTranslation } from 'react-i18next'
@@ -19,10 +18,12 @@ import {
 } from 'react-icons/tb'
 
 import { queryClient } from '@shared/api'
+import { TConfigProfileWithCore } from '@shared/api/contracts/core-contract'
 import { QueryKeys, useUpdateConfigProfile } from '@shared/api/hooks'
 import { useIsMobile } from '@shared/hooks'
 import { useDownloadTemplate } from '@shared/ui/load-templates/use-download-template'
 import { BaseOverlayHeader } from '@shared/ui/overlays/base-overlay-header'
+import { getConfigProfileCoreType } from '@shared/utils/core-utils'
 
 import {
     MODALS,
@@ -48,6 +49,8 @@ export function ConfigEditorActionsFeature(props: Props) {
         setOriginalValue
     } = props
     const { t } = useTranslation()
+    const coreType = getConfigProfileCoreType(configProfile)
+    const isXray = coreType === 'xray'
 
     const isMobile = useIsMobile()
     const clipboard = useClipboard({ timeout: 500 })
@@ -60,9 +63,7 @@ export function ConfigEditorActionsFeature(props: Props) {
 
     const { mutate: updateConfig, isPending: isUpdating } = useUpdateConfigProfile({
         mutationFns: {
-            onSuccess: async (
-                updatedConfigProfile: UpdateConfigProfileCommand.Response['response']
-            ) => {
+            onSuccess: async (updatedConfigProfile: TConfigProfileWithCore) => {
                 await queryClient.refetchQueries({
                     queryKey: QueryKeys.configProfiles.getConfigProfiles.queryKey
                 })
@@ -119,6 +120,7 @@ export function ConfigEditorActionsFeature(props: Props) {
             updateConfig({
                 variables: {
                     uuid: configProfile.uuid,
+                    coreType,
                     config: JSON.parse(currentValue)
                 }
             })
@@ -291,32 +293,36 @@ export function ConfigEditorActionsFeature(props: Props) {
 
                         <Menu.Divider />
 
-                        <Menu.Item
-                            leftSection={<TbTools size={14} />}
-                            onClick={() => {
-                                modals.open({
-                                    title: (
-                                        <BaseOverlayHeader
-                                            iconColor="teal"
-                                            IconComponent={TbTools}
-                                            iconVariant="soft"
-                                            title={t('config-editor-actions.feature.tools')}
-                                        />
-                                    ),
-                                    centered: true,
-                                    children: <KeypairGeneratorWidget />
-                                })
-                            }}
-                        >
-                            {t('config-editor-actions.feature.generate-keypair')}
-                        </Menu.Item>
+                        {isXray && (
+                            <>
+                                <Menu.Item
+                                    leftSection={<TbTools size={14} />}
+                                    onClick={() => {
+                                        modals.open({
+                                            title: (
+                                                <BaseOverlayHeader
+                                                    iconColor="teal"
+                                                    IconComponent={TbTools}
+                                                    iconVariant="soft"
+                                                    title={t('config-editor-actions.feature.tools')}
+                                                />
+                                            ),
+                                            centered: true,
+                                            children: <KeypairGeneratorWidget />
+                                        })
+                                    }}
+                                >
+                                    {t('config-editor-actions.feature.generate-keypair')}
+                                </Menu.Item>
 
-                        <Menu.Item
-                            leftSection={<TbDownload size={14} />}
-                            onClick={openDownloadModal}
-                        >
-                            {t('config-editor-actions.feature.load-from-github')}
-                        </Menu.Item>
+                                <Menu.Item
+                                    leftSection={<TbDownload size={14} />}
+                                    onClick={openDownloadModal}
+                                >
+                                    {t('config-editor-actions.feature.load-from-github')}
+                                </Menu.Item>
+                            </>
+                        )}
                     </Menu.Dropdown>
                 </Menu>
 

@@ -4,6 +4,7 @@ import {
     Button,
     Group,
     Modal,
+    SegmentedControl,
     Stack,
     Text,
     TextInput,
@@ -11,12 +12,17 @@ import {
 } from '@mantine/core'
 import { useField } from '@mantine/form'
 import { useDisclosure } from '@mantine/hooks'
-import { CreateConfigProfileCommand } from '@remnawave/backend-contract'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { TbCode, TbPlus, TbRefresh } from 'react-icons/tb'
+import { TbBox, TbCode, TbPlus, TbRefresh } from 'react-icons/tb'
 import { generatePath, useNavigate } from 'react-router'
 
 import { queryClient } from '@shared/api'
+import {
+    CONFIG_CORE_TYPE,
+    CreateConfigProfileWithCoreCommand,
+    TCoreType
+} from '@shared/api/contracts/core-contract'
 import { QueryKeys, useCreateConfigProfile, useGetConfigProfiles } from '@shared/api/hooks'
 import { ROUTES } from '@shared/constants'
 import { HelpActionIconShared } from '@shared/ui/help-drawer'
@@ -32,8 +38,44 @@ interface IProps {
     viewMode: CONFIG_PROFILES_VIEW_MODE
 }
 
-const generateDefaultConfig = () => {
+const generateDefaultConfig = (coreType: TCoreType) => {
     const randomNumber = Math.floor(Math.random() * 999999) + 1
+
+    if (coreType === CONFIG_CORE_TYPE.SINGBOX) {
+        return {
+            log: {
+                level: 'info',
+                timestamp: true
+            },
+            inbounds: [
+                {
+                    type: 'anytls',
+                    tag: `AnyTLS_${randomNumber}`,
+                    listen: '::',
+                    listen_port: 443,
+                    users: [],
+                    tls: {
+                        enabled: true,
+                        certificate_path: '/etc/remnawave/tls/fullchain.pem',
+                        key_path: '/etc/remnawave/tls/privkey.pem'
+                    }
+                }
+            ],
+            outbounds: [
+                {
+                    type: 'direct',
+                    tag: 'DIRECT'
+                },
+                {
+                    type: 'block',
+                    tag: 'BLOCK'
+                }
+            ],
+            route: {
+                rules: []
+            }
+        }
+    }
 
     return {
         log: {
@@ -77,6 +119,7 @@ export const ConfigProfilesHeaderActionButtonsFeature = (props: IProps) => {
     const { t } = useTranslation()
 
     const [opened, { open, close }] = useDisclosure(false)
+    const [coreType, setCoreType] = useState<TCoreType>(CONFIG_CORE_TYPE.XRAY)
     const navigate = useNavigate()
 
     const handleUpdate = async () => {
@@ -85,12 +128,14 @@ export const ConfigProfilesHeaderActionButtonsFeature = (props: IProps) => {
         })
     }
 
-    const nameField = useField<CreateConfigProfileCommand.Request['name']>({
+    const nameField = useField<
+        ReturnType<typeof CreateConfigProfileWithCoreCommand.RequestSchema.parse>['name']
+    >({
         initialValue: '',
         validateOnChange: true,
         validate: (value) => {
-            const result = CreateConfigProfileCommand.RequestSchema.omit({
-                config: true
+            const result = CreateConfigProfileWithCoreCommand.RequestSchema.pick({
+                name: true
             }).safeParse({ name: value })
             return result.success ? null : result.error.errors[0]?.message
         }
@@ -100,6 +145,7 @@ export const ConfigProfilesHeaderActionButtonsFeature = (props: IProps) => {
             onSuccess: (data) => {
                 close()
                 nameField.reset()
+                setCoreType(CONFIG_CORE_TYPE.XRAY)
                 handleUpdate()
                 navigate(
                     generatePath(ROUTES.DASHBOARD.MANAGEMENT.CONFIG_PROFILE_BY_UUID, {
@@ -168,7 +214,7 @@ export const ConfigProfilesHeaderActionButtonsFeature = (props: IProps) => {
                 size="md"
                 title={
                     <BaseOverlayHeader
-                        IconComponent={XrayLogo}
+                        IconComponent={coreType === CONFIG_CORE_TYPE.XRAY ? XrayLogo : TbBox}
                         iconVariant="soft"
                         title={t(
                             'config-profiles-header-action-buttons.feature.create-config-profile'
@@ -182,22 +228,26 @@ export const ConfigProfilesHeaderActionButtonsFeature = (props: IProps) => {
                         createConfigProfile({
                             variables: {
                                 name: nameField.getValue(),
-                                config: generateDefaultConfig()
+                                coreType,
+                                config: generateDefaultConfig(coreType)
                             }
                         })
                     }}
                 >
                     <Stack gap="md">
                         <Text size="sm">
-                            {t(
-                                'config-profiles-header-action-buttons.feature.create-a-new-config-profile-by-entering-a-name-below'
-                            )}
-                            <br />
-
-                            {t(
-                                'config-profiles-header-action-buttons.feature.you-can-customize-xray-config-after-creation'
-                            )}
+                            Choose the core for this profile, then customize its JSON configuration.
+                            AnyTLS is available in sing-box profiles.
                         </Text>
+                        <SegmentedControl
+                            data={[
+                                { label: 'Xray', value: CONFIG_CORE_TYPE.XRAY },
+                                { label: 'sing-box + AnyTLS', value: CONFIG_CORE_TYPE.SINGBOX }
+                            ]}
+                            fullWidth
+                            onChange={(value) => setCoreType(value as TCoreType)}
+                            value={coreType}
+                        />
                         <TextInput
                             data-autofocus
                             label={t('config-profiles-header-action-buttons.feature.profile-name')}

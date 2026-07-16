@@ -6,6 +6,7 @@ import { app } from 'src/config'
 import { useGetConfigProfile, useGetSnippets } from '@shared/api/hooks'
 import { ROUTES } from '@shared/constants'
 import { LoadingScreen } from '@shared/ui'
+import { getConfigProfileCoreType } from '@shared/utils/core-utils'
 import { fetchWithProgress } from '@shared/utils/fetch-with-progress'
 
 import { ConfigProfileByUuidPageComponent } from '../components/config-profile-by-uuid.page.component'
@@ -28,6 +29,8 @@ export function ConfigProfileByUuidPageConnector() {
     })
 
     const { data: snippets, isLoading: isSnippetsLoading } = useGetSnippets({})
+    const coreType = configProfile ? getConfigProfileCoreType(configProfile) : null
+    const isEditorLoading = coreType === 'singbox' ? false : isLoading
 
     const initWasm = useCallback(async (isRestart = false) => {
         if (isRestart) {
@@ -82,19 +85,43 @@ export function ConfigProfileByUuidPageConnector() {
     }, [initWasm])
 
     useLayoutEffect(() => {
-        initWasm()
+        if (!configProfile) return
+
+        if (coreType === 'singbox') {
+            return
+        }
+
+        const initTimer = window.setTimeout(() => {
+            initWasm()
+        }, 0)
 
         return () => {
+            window.clearTimeout(initTimer)
             delete window.onWasmInitialized
         }
-    }, [])
+    }, [configProfile?.uuid, coreType, initWasm])
 
     if (!uuid) {
         return <Navigate to={ROUTES.DASHBOARD.MANAGEMENT.CONFIG_PROFILES} />
     }
 
-    if (isLoading || isConfigProfileLoading || !configProfile || isSnippetsLoading || !snippets) {
-        return <LoadingScreen text="WASM module is loading..." value={downloadProgress} />
+    if (
+        isEditorLoading ||
+        isConfigProfileLoading ||
+        !configProfile ||
+        isSnippetsLoading ||
+        !snippets
+    ) {
+        return (
+            <LoadingScreen
+                text={
+                    coreType === 'singbox'
+                        ? 'Loading sing-box editor...'
+                        : 'WASM module is loading...'
+                }
+                value={downloadProgress}
+            />
+        )
     }
 
     return (

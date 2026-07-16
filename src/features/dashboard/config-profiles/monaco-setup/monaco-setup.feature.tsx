@@ -10,28 +10,46 @@ import consola from 'consola'
 import { app } from 'src/config'
 import zodToJsonSchema, { jsonDescription } from 'zod-to-json-schema'
 
+import { CONFIG_CORE_TYPE, TCoreType } from '@shared/api/contracts/core-contract'
 import { monacoTheme } from '@shared/constants/monaco-theme'
+import singBoxSchemaSource from '@shared/schemas/singbox.schema.json'
+
+interface JsonSchema {
+    [key: string]: unknown
+    definitions?: Record<
+        string,
+        {
+            properties?: Record<string, unknown>
+        }
+    >
+}
 
 export const MonacoSetupFeature = {
     setup: async (
         monaco: Monaco,
         currentLanguage: string,
-        snippets: GetSnippetsCommand.Response['response']['snippets']
+        snippets: GetSnippetsCommand.Response['response']['snippets'],
+        coreType: TCoreType
     ) => {
         try {
             const snippetNames = snippets.map((s) => s.name)
 
-            let { jsonSchemaUrl } = app.configEditor
-            switch (currentLanguage) {
-                case 'zh':
-                    jsonSchemaUrl = app.configEditor.jsonSchemaCnUrl
-                    break
-                default:
-                    jsonSchemaUrl = app.configEditor.jsonSchemaUrl
-            }
+            let schema: JsonSchema
+            if (coreType === CONFIG_CORE_TYPE.SINGBOX) {
+                schema = structuredClone(singBoxSchemaSource) as JsonSchema
+            } else {
+                let { jsonSchemaUrl } = app.configEditor
+                switch (currentLanguage) {
+                    case 'zh':
+                        jsonSchemaUrl = app.configEditor.jsonSchemaCnUrl
+                        break
+                    default:
+                        jsonSchemaUrl = app.configEditor.jsonSchemaUrl
+                }
 
-            const response = await axios.get(jsonSchemaUrl)
-            const schema = await response.data
+                const response = await axios.get<JsonSchema>(jsonSchemaUrl)
+                schema = await response.data
+            }
 
             const snippetDescriptions = snippets.map((snippet) => {
                 const snippetJson = JSON.stringify(snippet.snippet, null, 1)
@@ -66,6 +84,14 @@ export const MonacoSetupFeature = {
                 schema.definitions.BalancerObject.properties.snippet = snippetSchema
             }
 
+            if (schema.definitions?.taggedObject?.properties) {
+                schema.definitions.taggedObject.properties.snippet = snippetSchema
+            }
+
+            if (schema.definitions?.snippetObject?.properties) {
+                schema.definitions.snippetObject.properties.snippet = snippetSchema
+            }
+
             monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
                 allowComments: false,
                 enableSchemaRequest: true,
@@ -74,7 +100,10 @@ export const MonacoSetupFeature = {
                     {
                         fileMatch: ['*'],
                         schema,
-                        uri: 'https://xray-config-schema.json'
+                        uri:
+                            coreType === CONFIG_CORE_TYPE.SINGBOX
+                                ? 'https://sing-box-config-schema.json'
+                                : 'https://xray-config-schema.json'
                     }
                 ],
                 validate: true

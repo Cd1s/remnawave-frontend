@@ -19,9 +19,15 @@ import {
 } from 'react-icons/pi'
 import { TbAlertCircle } from 'react-icons/tb'
 
+import { CoreLogo } from '@shared/ui/core-logo'
 import { Logo } from '@shared/ui/logo'
-import { XrayLogo } from '@shared/ui/logos'
 import { prettifyBytesUtil, prettySiRealtimeBytesUtil } from '@shared/utils/bytes'
+import {
+    getCoreLabel,
+    getNodeCoreType,
+    getNodeCoreUptime,
+    getNodeCoreVersion
+} from '@shared/utils/core-utils'
 import { faviconResolver } from '@shared/utils/misc'
 import { getNodeResetDaysUtil, getXrayUptimeUtil } from '@shared/utils/time-utils'
 
@@ -101,7 +107,11 @@ export const NodeCardWidget = memo((props: IProps) => {
     const percentage = calcPercentage()
     const fallbackProgress = node.isTrafficTrackingActive && node.trafficLimitBytes === 0
 
-    const isOnline = node.isConnected && node.xrayUptime !== 0 && !node.isDisabled
+    const coreType = getNodeCoreType(node)
+    const coreLabel = getCoreLabel(coreType)
+    const coreVersion = getNodeCoreVersion(node)
+    const coreUptime = getNodeCoreUptime(node)
+    const isOnline = node.isConnected && coreUptime !== 0 && !node.isDisabled
     const isConfigMissing =
         node.configProfile.activeConfigProfileUuid === null ||
         node.configProfile.activeInbounds.length === 0
@@ -345,14 +355,14 @@ export const NodeCardWidget = memo((props: IProps) => {
 
                                 {isOnline && (
                                     <Flex align="center" gap={4}>
-                                        <XrayLogo size={14} />
+                                        <CoreLogo coreType={coreType} size={14} />
                                         <Text
                                             c={isOnline ? 'teal' : 'red'}
                                             fw={isOnline ? 600 : 500}
                                             size="sm"
                                             truncate
                                         >
-                                            {getXrayUptimeUtil(node.xrayUptime)}
+                                            {getXrayUptimeUtil(coreUptime)}
                                         </Text>
                                     </Flex>
                                 )}
@@ -440,9 +450,13 @@ export const NodeCardWidget = memo((props: IProps) => {
                         </Flex>
                         <Flex align="center" gap="md" ml="auto">
                             <Flex align="center" gap={4}>
-                                <XrayLogo color="var(--mantine-color-dimmed)" size={12} />
+                                <CoreLogo
+                                    color="var(--mantine-color-dimmed)"
+                                    coreType={coreType}
+                                    size={12}
+                                />
                                 <Text c="dimmed" ff="monospace" size="xs">
-                                    {node.versions ? node.versions.xray : '—'}
+                                    {coreVersion ? `${coreLabel} ${coreVersion}` : '—'}
                                 </Text>
                             </Flex>
                             <Flex align="center" gap={4}>
@@ -592,13 +606,13 @@ export const NodeCardWidget = memo((props: IProps) => {
                         )}
 
                         <Flex align="center" gap={4}>
-                            <XrayLogo size={12} />
+                            <CoreLogo coreType={coreType} size={12} />
                             <Text
                                 c={isOnline ? 'teal' : 'dimmed'}
                                 fw={isOnline ? 600 : 500}
                                 size="xs"
                             >
-                                {isOnline ? getXrayUptimeUtil(node.xrayUptime) : 'offline'}
+                                {isOnline ? getXrayUptimeUtil(coreUptime) : 'offline'}
                             </Text>
                         </Flex>
                     </Flex>

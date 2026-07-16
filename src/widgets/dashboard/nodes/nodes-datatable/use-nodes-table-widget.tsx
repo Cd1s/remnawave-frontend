@@ -22,6 +22,12 @@ import {
     prettySiBytesUtil,
     prettySiRealtimeBytesUtil
 } from '@shared/utils/bytes'
+import {
+    getCoreLabel,
+    getNodeCoreType,
+    getNodeCoreUptime,
+    getNodeCoreVersion
+} from '@shared/utils/core-utils'
 import { faviconResolver } from '@shared/utils/misc'
 import { formatDurationUtil } from '@shared/utils/time-utils'
 
@@ -268,16 +274,22 @@ export function getNodesTableColumns(
             render: ({ nodeConsumptionMultiplier }) => nodeConsumptionMultiplier.toFixed(1)
         },
         {
-            accessor: 'versions.xray',
+            accessor: 'versions.core',
             sortable: true,
-            title: t('use-nodes-table-widget.xray-v'),
-            render: ({ versions }) => (versions ? versions.xray : '-')
+            title: 'Core',
+            render: (node) => {
+                const version = getNodeCoreVersion(node)
+                return version ? `${getCoreLabel(getNodeCoreType(node))} ${version}` : '-'
+            }
         },
         {
-            accessor: 'xrayUptime',
+            accessor: 'coreUptime',
             sortable: true,
-            title: 'Xray Uptime',
-            render: ({ xrayUptime }) => (xrayUptime !== 0 ? formatDurationUtil(xrayUptime) : '-')
+            title: 'Core Uptime',
+            render: (node) => {
+                const uptime = getNodeCoreUptime(node)
+                return uptime !== 0 ? formatDurationUtil(uptime) : '-'
+            }
         },
         {
             accessor: 'versions.node',

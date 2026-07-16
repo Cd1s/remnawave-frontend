@@ -1,18 +1,21 @@
 import { notifications } from '@mantine/notifications'
 import {
-    CreateConfigProfileCommand,
     DeleteConfigProfileCommand,
-    ReorderConfigProfileCommand,
-    UpdateConfigProfileCommand
+    ReorderConfigProfileCommand
 } from '@remnawave/backend-contract'
+
+import {
+    CreateConfigProfileWithCoreCommand,
+    UpdateConfigProfileWithCoreCommand
+} from '@shared/api/contracts/core-contract'
 
 import { createMutationHook } from '../../tsq-helpers'
 
 export const useUpdateConfigProfile = createMutationHook({
-    endpoint: UpdateConfigProfileCommand.TSQ_url,
-    bodySchema: UpdateConfigProfileCommand.RequestSchema,
-    responseSchema: UpdateConfigProfileCommand.ResponseSchema,
-    requestMethod: UpdateConfigProfileCommand.endpointDetails.REQUEST_METHOD,
+    endpoint: UpdateConfigProfileWithCoreCommand.TSQ_url,
+    bodySchema: UpdateConfigProfileWithCoreCommand.RequestSchema,
+    responseSchema: UpdateConfigProfileWithCoreCommand.ResponseSchema,
+    requestMethod: UpdateConfigProfileWithCoreCommand.endpointDetails.REQUEST_METHOD,
     rMutationParams: {
         onSuccess: () => {
             notifications.show({
@@ -57,10 +60,10 @@ export const useDeleteConfigProfile = createMutationHook({
 })
 
 export const useCreateConfigProfile = createMutationHook({
-    endpoint: CreateConfigProfileCommand.TSQ_url,
-    responseSchema: CreateConfigProfileCommand.ResponseSchema,
-    bodySchema: CreateConfigProfileCommand.RequestSchema,
-    requestMethod: CreateConfigProfileCommand.endpointDetails.REQUEST_METHOD,
+    endpoint: CreateConfigProfileWithCoreCommand.TSQ_url,
+    responseSchema: CreateConfigProfileWithCoreCommand.ResponseSchema,
+    bodySchema: CreateConfigProfileWithCoreCommand.RequestSchema,
+    requestMethod: CreateConfigProfileWithCoreCommand.endpointDetails.REQUEST_METHOD,
     rMutationParams: {
         onSuccess: () => {
             notifications.show({
