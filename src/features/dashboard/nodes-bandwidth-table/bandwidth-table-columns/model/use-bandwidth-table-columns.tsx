@@ -1,6 +1,6 @@
 import { ListViewTableColumn } from '@gfazioli/mantine-list-view-table'
 import { Flex, Progress, Text } from '@mantine/core'
-import { GetAllNodesCommand } from '@remnawave/backend-contract'
+import { GetNodesCommand } from '@remnawave/backend-contract'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -16,7 +16,7 @@ export const useBandwidthTableColumns = () => {
         return 'teal.6'
     }
 
-    return useMemo<ListViewTableColumn<GetAllNodesCommand.Response['response'][number]>[]>(
+    return useMemo<ListViewTableColumn<GetNodesCommand.Response['response'][number]>[]>(
         () => [
             {
                 key: 'name',

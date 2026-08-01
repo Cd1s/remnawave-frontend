@@ -17,13 +17,13 @@ export const configProfilesQueryKeys = createQueryKeys('configProfiles', {
     getConfigProfiles: {
         queryKey: null
     },
-    getConfigProfile: (route: GetConfigProfileByUuidCommand.Request) => ({
+    getConfigProfile: (route: GetConfigProfileByUuidCommand.RequestParam) => ({
         queryKey: [route]
     }),
-    getComputedConfigProfile: (route: GetComputedConfigProfileByUuidCommand.Request) => ({
+    getComputedConfigProfile: (route: GetComputedConfigProfileByUuidCommand.RequestParam) => ({
         queryKey: [route]
     }),
-    getConfigProfileInbounds: (route: GetConfigProfileByUuidCommand.Request) => ({
+    getConfigProfileInbounds: (route: GetConfigProfileByUuidCommand.RequestParam) => ({
         queryKey: [route]
     })
 })
@@ -42,7 +42,7 @@ export const useGetConfigProfiles = createGetQueryHook({
 export const useGetConfigProfile = createGetQueryHook({
     endpoint: GetConfigProfileByUuidWithCoreCommand.TSQ_url,
     responseSchema: GetConfigProfileByUuidWithCoreCommand.ResponseSchema,
-    routeParamsSchema: GetConfigProfileByUuidCommand.RequestSchema,
+    routeParamsSchema: GetConfigProfileByUuidCommand.RequestParamSchema,
     getQueryKey: ({ route }) => configProfilesQueryKeys.getConfigProfile(route!).queryKey,
     rQueryParams: {
         refetchOnMount: true,
@@ -54,7 +54,7 @@ export const useGetConfigProfile = createGetQueryHook({
 export const useGetConfigProfileInbounds = createGetQueryHook({
     endpoint: GetInboundsByProfileUuidCommand.TSQ_url,
     responseSchema: GetInboundsByProfileUuidCommand.ResponseSchema,
-    routeParamsSchema: GetInboundsByProfileUuidCommand.RequestSchema,
+    routeParamsSchema: GetInboundsByProfileUuidCommand.RequestParamSchema,
     getQueryKey: ({ route }) => configProfilesQueryKeys.getConfigProfileInbounds(route!).queryKey,
     rQueryParams: {
         refetchOnMount: true,
@@ -66,7 +66,7 @@ export const useGetConfigProfileInbounds = createGetQueryHook({
 export const useGetComputedConfigProfile = createGetQueryHook({
     endpoint: GetComputedConfigProfileByUuidCommand.TSQ_url,
     responseSchema: GetComputedConfigProfileByUuidCommand.ResponseSchema,
-    routeParamsSchema: GetComputedConfigProfileByUuidCommand.RequestSchema,
+    routeParamsSchema: GetComputedConfigProfileByUuidCommand.RequestParamSchema,
     getQueryKey: ({ route }) => configProfilesQueryKeys.getComputedConfigProfile(route!).queryKey,
     rQueryParams: {
         enabled: false

@@ -34,7 +34,8 @@ export const ROUTES = {
             HWID_INSPECTOR: '/dashboard/tools/hwid-inspector',
             SRH_INSPECTOR: '/dashboard/tools/srh-inspector',
             TORRENT_BLOCKER_REPORTS: '/dashboard/tools/torrent-blocker-reports',
-            SESSIONS_EXPLORER: '/dashboard/tools/sessions-explorer'
+            SESSIONS_EXPLORER: '/dashboard/tools/sessions-explorer',
+            HTTP_STATS: '/dashboard/tools/http-stats'
         },
         TEMPLATES: {
             ROOT: '/dashboard/templates',

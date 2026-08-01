@@ -13,7 +13,7 @@ import { createMutationHook } from '../../tsq-helpers'
 
 export const useUpdateConfigProfile = createMutationHook({
     endpoint: UpdateConfigProfileWithCoreCommand.TSQ_url,
-    bodySchema: UpdateConfigProfileWithCoreCommand.RequestSchema,
+    bodySchema: UpdateConfigProfileWithCoreCommand.RequestBodySchema,
     responseSchema: UpdateConfigProfileWithCoreCommand.ResponseSchema,
     requestMethod: UpdateConfigProfileWithCoreCommand.endpointDetails.REQUEST_METHOD,
     rMutationParams: {
@@ -37,8 +37,7 @@ export const useUpdateConfigProfile = createMutationHook({
 
 export const useDeleteConfigProfile = createMutationHook({
     endpoint: DeleteConfigProfileCommand.TSQ_url,
-    responseSchema: DeleteConfigProfileCommand.ResponseSchema,
-    routeParamsSchema: DeleteConfigProfileCommand.RequestSchema,
+    routeParamsSchema: DeleteConfigProfileCommand.RequestParamSchema,
     requestMethod: DeleteConfigProfileCommand.endpointDetails.REQUEST_METHOD,
     rMutationParams: {
         onSuccess: () => {
@@ -62,7 +61,7 @@ export const useDeleteConfigProfile = createMutationHook({
 export const useCreateConfigProfile = createMutationHook({
     endpoint: CreateConfigProfileWithCoreCommand.TSQ_url,
     responseSchema: CreateConfigProfileWithCoreCommand.ResponseSchema,
-    bodySchema: CreateConfigProfileWithCoreCommand.RequestSchema,
+    bodySchema: CreateConfigProfileWithCoreCommand.RequestBodySchema,
     requestMethod: CreateConfigProfileWithCoreCommand.endpointDetails.REQUEST_METHOD,
     rMutationParams: {
         onSuccess: () => {
@@ -85,7 +84,7 @@ export const useCreateConfigProfile = createMutationHook({
 
 export const useReorderConfigProfiles = createMutationHook({
     endpoint: ReorderConfigProfileCommand.TSQ_url,
-    bodySchema: ReorderConfigProfileCommand.RequestSchema,
+    bodySchema: ReorderConfigProfileCommand.RequestBodySchema,
     responseSchema: ReorderConfigProfileCommand.ResponseSchema,
     requestMethod: ReorderConfigProfileCommand.endpointDetails.REQUEST_METHOD,
     rMutationParams: {

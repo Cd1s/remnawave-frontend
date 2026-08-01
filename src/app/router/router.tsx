@@ -6,6 +6,7 @@ import { InfraBillingPageConnector } from '@pages/dashboard/crm/infra-billing/co
 import { ExternalSquadsPageConnector } from '@pages/dashboard/external-squads/connectors'
 import { HomePageConnector } from '@pages/dashboard/home/connectors'
 import { HostsPageConnector } from '@pages/dashboard/hosts/ui/connectors'
+import { HttpStatsPageConnector } from '@pages/dashboard/http-stats/ui/connectors/http-stats.page.connector'
 import { HwidInspectorPageConnector } from '@pages/dashboard/hwid-inspector/ui/connectors'
 import { InternalSquadsPageConnector } from '@pages/dashboard/internal-squads/connectors/internal-squads.page.connector'
 import { NodePluginEditorPageConnector } from '@pages/dashboard/node-plugins/ui/connectors/node-plugin-editor-page.connector'
@@ -44,7 +45,7 @@ import { MainLayout } from '../layouts/dashboard/main-layout/layout'
 
 const router = createBrowserRouter(
     createRoutesFromElements(
-        <Route element={<ErrorBoundaryHoc fallback={<ErrorPageComponent />} />}>
+        <Route element={<ErrorBoundaryHoc FallbackComponent={ErrorPageComponent} />}>
             <Route element={<AuthLayout />} path={ROUTES.OAUTH2.ROOT}>
                 <Route element={<Oauth2CallbackPage />} path={ROUTES.OAUTH2.ROOT} />
             </Route>
@@ -147,6 +148,10 @@ const router = createBrowserRouter(
                         <Route
                             element={<SessionsExplorerPageConnector />}
                             path={ROUTES.DASHBOARD.TOOLS.SESSIONS_EXPLORER}
+                        />
+                        <Route
+                            element={<HttpStatsPageConnector />}
+                            path={ROUTES.DASHBOARD.TOOLS.HTTP_STATS}
                         />
                     </Route>
 

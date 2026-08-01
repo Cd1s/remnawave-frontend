@@ -1,7 +1,7 @@
 import { useBandwidthTableColumns } from '@features/dashboard/nodes-bandwidth-table/bandwidth-table-columns/model/use-bandwidth-table-columns'
 import { ListViewTable } from '@gfazioli/mantine-list-view-table'
 import { Table } from '@mantine/core'
-import { GetAllNodesCommand } from '@remnawave/backend-contract'
+import { GetNodesCommand } from '@remnawave/backend-contract'
 import dayjs from 'dayjs'
 import { useTranslation } from 'react-i18next'
 import { TbChartArcs } from 'react-icons/tb'
@@ -13,7 +13,7 @@ export function NodesBandwidthTableWidget() {
     const { data: nodes, isLoading } = useGetNodes({
         rQueryParams: {
             select: (data: unknown) => {
-                const nodes = data as GetAllNodesCommand.Response['response']
+                const nodes = data as GetNodesCommand.Response['response']
                 return nodes.filter((node) => node.isTrafficTrackingActive)
             }
         }

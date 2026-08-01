@@ -1,10 +1,10 @@
 import {
     ConfigProfileSchema,
     CreateConfigProfileCommand,
-    GetAllNodesCommand,
     GetConfigProfileByUuidCommand,
     GetConfigProfilesCommand,
-    GetOneNodeCommand,
+    GetNodeCommand,
+    GetNodesCommand,
     NodesSchema,
     UpdateConfigProfileCommand
 } from '@remnawave/backend-contract'
@@ -25,7 +25,7 @@ export type TConfigProfileWithCore = z.infer<typeof ConfigProfileWithCoreSchema>
 
 export const CreateConfigProfileWithCoreCommand = {
     ...CreateConfigProfileCommand,
-    RequestSchema: CreateConfigProfileCommand.RequestSchema.extend({
+    RequestBodySchema: CreateConfigProfileCommand.RequestBodySchema.extend({
         coreType: CoreTypeSchema.default(CONFIG_CORE_TYPE.XRAY)
     }),
     ResponseSchema: z.object({
@@ -35,7 +35,7 @@ export const CreateConfigProfileWithCoreCommand = {
 
 export const UpdateConfigProfileWithCoreCommand = {
     ...UpdateConfigProfileCommand,
-    RequestSchema: UpdateConfigProfileCommand.RequestSchema.extend({
+    RequestBodySchema: UpdateConfigProfileCommand.RequestBodySchema.extend({
         coreType: CoreTypeSchema.optional()
     }),
     ResponseSchema: z.object({
@@ -75,14 +75,14 @@ export const NodeWithCoreSchema = NodesSchema.extend({
 export type TNodeWithCore = z.infer<typeof NodeWithCoreSchema>
 
 export const GetAllNodesWithCoreCommand = {
-    ...GetAllNodesCommand,
+    ...GetNodesCommand,
     ResponseSchema: z.object({
         response: z.array(NodeWithCoreSchema)
     })
 }
 
 export const GetOneNodeWithCoreCommand = {
-    ...GetOneNodeCommand,
+    ...GetNodeCommand,
     ResponseSchema: z.object({
         response: NodeWithCoreSchema
     })
