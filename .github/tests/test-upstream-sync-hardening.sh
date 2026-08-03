@@ -61,8 +61,15 @@ test_upstream_tag_fetch_is_namespaced() {
         file_contains "$WORKFLOW" 'git fetch --no-tags upstream "refs/tags/${{ steps.release.outputs.tag }}:refs/tags/upstream-release-${{ steps.release.outputs.tag }}"'
 }
 
+test_checkout_and_readonly_resolver_use_workflow_token() {
+    file_contains "$WORKFLOW" 'token: ${{ secrets.WORKFLOW_TOKEN }}' &&
+        file_contains "$WORKFLOW" 'GH_TOKEN: ${{ secrets.WORKFLOW_TOKEN }}' &&
+        ! file_contains "$WORKFLOW" 'token: ${{ secrets.WORKFLOW_TOKEN || secrets.GITHUB_TOKEN }}'
+}
+
 run_case() { if "$1"; then pass "$1"; else fail "$1"; fi; }
 run_case test_resolver_stable; run_case test_merge_and_package_failure; run_case test_workflow_contract
 run_case test_upstream_tag_fetch_is_namespaced
+run_case test_checkout_and_readonly_resolver_use_workflow_token
 [ "$failures" -eq 0 ] || exit 1
 printf 'all upstream hardening tests passed\n'
