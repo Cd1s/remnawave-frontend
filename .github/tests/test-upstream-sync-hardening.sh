@@ -73,7 +73,7 @@ test_push_uses_process_scoped_workflow_auth() {
         file_contains "$WORKFLOW" 'GH_TOKEN: ${{ secrets.WORKFLOW_TOKEN }}' &&
         ! file_contains "$WORKFLOW" 'WORKFLOW_CHANGED:' &&
         ! file_contains "$WORKFLOW" 'GITHUB_TOKEN: ${{ github.token }}' &&
-        file_contains "$WORKFLOW" 'git config --unset-all http.https://github.com/.extraheader || true' &&
+        file_contains "$WORKFLOW" 'git config --local --unset-all http.https://github.com/.extraheader || true' &&
         ! file_contains "$WORKFLOW" 'Configure ephemeral GitHub auth for push'
 }
 
@@ -81,7 +81,7 @@ test_push_auth_never_duplicates_checkout_extraheader() {
     ! file_contains "$WORKFLOW" 'GITHUB_TOKEN: ${{ github.token }}' || return 1
     ! file_contains "$WORKFLOW" 'WORKFLOW_CHANGED:' || return 1
     ! file_contains "$WORKFLOW" 'push_token=' || return 1
-    [ "$(grep -Fc 'git config --unset-all http.https://github.com/.extraheader || true' "$WORKFLOW")" -eq 2 ] || return 1
+    [ "$(grep -Fc 'git config --local --unset-all http.https://github.com/.extraheader || true' "$WORKFLOW")" -eq 2 ] || return 1
     [ "$(grep -Fc 'GIT_CONFIG_COUNT=1' "$WORKFLOW")" -eq 2 ] || return 1
     awk '/if \[.*push_token.*GITHUB_TOKEN.*\]; then/ { in_auth=1; saw_else=0; next } in_auth && /else/ { saw_else=1; next } in_auth && /git config --unset-all http\.https:\/\/github\.com\/\.extraheader \|\| true/ && !saw_else { exit 1 } in_auth && /GIT_CONFIG_COUNT=1/ && !saw_else { exit 1 } in_auth && /fi/ { if (!saw_else) exit 1; in_auth=0 } END { if (in_auth) exit 1 }' "$WORKFLOW"
 }
@@ -191,7 +191,7 @@ run_case test_upstream_tag_fetch_is_namespaced
 run_case test_checkout_and_readonly_resolver_use_fallback_token
 run_case test_push_uses_process_scoped_workflow_auth
 run_case test_push_auth_never_duplicates_checkout_extraheader
-run_case test_capability_preflight_rejects_missing_workflow_token_v2
-run_case test_capability_preflight_rejects_actions_bypass_v2
+run_case test_capability_preflight_accepts_token_without_permissions_and_skips_forbidden_probes
+run_case test_workflow_diff_without_token_fails_closed
 [ "$failures" -eq 0 ] || exit 1
 printf 'all upstream hardening tests passed\n'
