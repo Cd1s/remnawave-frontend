@@ -67,9 +67,15 @@ test_checkout_and_readonly_resolver_use_fallback_token() {
         file_contains "$WORKFLOW" 'WORKFLOW_TOKEN: ${{ secrets.WORKFLOW_TOKEN }}'
 }
 
+test_push_uses_ephemeral_workflow_auth() {
+    file_contains "$WORKFLOW" 'GIT_CONFIG_KEY_0=http.https://github.com/.extraheader' &&
+        file_contains "$WORKFLOW" 'GIT_CONFIG_VALUE_0=AUTHORIZATION: basic'
+}
+
 run_case() { if "$1"; then pass "$1"; else fail "$1"; fi; }
 run_case test_resolver_stable; run_case test_merge_and_package_failure; run_case test_workflow_contract
 run_case test_upstream_tag_fetch_is_namespaced
 run_case test_checkout_and_readonly_resolver_use_fallback_token
+run_case test_push_uses_ephemeral_workflow_auth
 [ "$failures" -eq 0 ] || exit 1
 printf 'all upstream hardening tests passed\n'
