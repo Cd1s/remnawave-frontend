@@ -56,7 +56,12 @@ test_workflow_contract() {
     file_contains "$WORKFLOW" '*/5 * * * *' || return 1; [ -z "$(awk '/^jobs:/{exit} /\$\{\{ runner\.temp \}\}/{print NR}' "$WORKFLOW")" ] || return 1; file_contains "$WORKFLOW" 'workflow_dispatch:' || return 1; file_contains "$WORKFLOW" 'cancel-in-progress: false' || return 1; file_contains "$WORKFLOW" 'WORKFLOW_TOKEN' || return 1; file_contains "$WORKFLOW" 'upstream-sync-lib.sh preflight' || return 1; file_contains "$WORKFLOW" 'upstream-sync-lib.sh package' || return 1; file_contains "$WORKFLOW" 'actions/upload-artifact@v4' || return 1; preflight_line="$(grep -n -m1 'upstream-sync-lib.sh preflight' "$WORKFLOW" | cut -d: -f1)"; push_line="$(grep -n -m1 'git push origin HEAD:singbox' "$WORKFLOW" | cut -d: -f1)"; [ -n "$preflight_line" ] && [ -n "$push_line" ] && [ "$preflight_line" -lt "$push_line" ] || return 1; file_contains "$WORKFLOW" 'git push origin HEAD:singbox'
 }
 
+test_upstream_tag_fetch_is_namespaced() {
+    file_contains "$WORKFLOW" 'refs/tags/${{ steps.release.outputs.tag }}:refs/tags/upstream-release-${{ steps.release.outputs.tag }}'
+}
+
 run_case() { if "$1"; then pass "$1"; else fail "$1"; fi; }
 run_case test_resolver_stable; run_case test_merge_and_package_failure; run_case test_workflow_contract
+run_case test_upstream_tag_fetch_is_namespaced
 [ "$failures" -eq 0 ] || exit 1
 printf 'all upstream hardening tests passed\n'
