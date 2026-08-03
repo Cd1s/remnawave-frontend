@@ -57,7 +57,8 @@ test_workflow_contract() {
 }
 
 test_upstream_tag_fetch_is_namespaced() {
-    file_contains "$WORKFLOW" 'refs/tags/${{ steps.release.outputs.tag }}:refs/tags/upstream-release-${{ steps.release.outputs.tag }}'
+    file_contains "$WORKFLOW" 'git fetch --no-tags upstream main' &&
+        file_contains "$WORKFLOW" 'git fetch --no-tags upstream "refs/tags/${{ steps.release.outputs.tag }}:refs/tags/upstream-release-${{ steps.release.outputs.tag }}"'
 }
 
 run_case() { if "$1"; then pass "$1"; else fail "$1"; fi; }
