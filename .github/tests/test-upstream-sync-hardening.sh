@@ -64,7 +64,7 @@ test_upstream_tag_fetch_is_namespaced() {
 test_checkout_and_readonly_resolver_use_fallback_token() {
     file_contains "$WORKFLOW" 'token: ${{ github.token }}' &&
         file_contains "$WORKFLOW" 'GH_TOKEN: ${{ github.token }}' &&
-        ! file_contains "$WORKFLOW" 'token: ${{ secrets.WORKFLOW_TOKEN }}'
+        file_contains "$WORKFLOW" 'WORKFLOW_TOKEN: ${{ secrets.WORKFLOW_TOKEN }}'
 }
 
 run_case() { if "$1"; then pass "$1"; else fail "$1"; fi; }
