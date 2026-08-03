@@ -43,6 +43,42 @@ EOF
     result="$(cd "$repo"; PATH="$mock_bin:$PATH" GIT_BIN="$mock_bin/git" REAL_GIT="$real_git" FAKE_UPSTREAM_COMMIT="$upstream_sha" FAKE_TAG=3.2.0 UPSTREAM_REPO=remnawave/test GITHUB_OUTPUT="$output" bash "$LIB" resolve 2>&1)" || return 1
     contains "$result" 'tag=3.2.0' && contains "$result" 'version=3.2.0'
 }
+test_historical_tag_collision_fetch_is_safe() {
+    fixture_root="$(mktemp -d)"
+    repo="$fixture_root/repo"
+    upstream_source="$fixture_root/upstream-source"
+    upstream="$fixture_root/upstream.git"
+    mkdir -p "$repo" "$upstream_source"
+    git init -q "$repo"
+    git -C "$repo" config user.name test
+    git -C "$repo" config user.email test@example.invalid
+    git -C "$repo" checkout -q -b singbox
+    printf 'fork\n' >"$repo/state"
+    git -C "$repo" add state
+    git -C "$repo" commit -q -m fork
+    fork_tag_sha="$(git -C "$repo" rev-parse HEAD)"
+    git -C "$repo" tag 3.2.0
+    git init -q "$upstream_source"
+    git -C "$upstream_source" config user.name upstream
+    git -C "$upstream_source" config user.email upstream@example.invalid
+    git -C "$upstream_source" checkout -q -b main
+    printf 'upstream\n' >"$upstream_source/state"
+    git -C "$upstream_source" add state
+    git -C "$upstream_source" commit -q -m upstream
+    upstream_sha="$(git -C "$upstream_source" rev-parse HEAD)"
+    git -C "$upstream_source" tag 3.2.0
+    git init -q --bare "$upstream"
+    git -C "$upstream_source" remote add origin "$upstream"
+    git -C "$upstream_source" push -q origin main refs/tags/3.2.0
+    git -C "$repo" remote add upstream "$upstream"
+
+    # RED: this is the previous workflow command and must fail on a fork-owned tag collision.
+    git -C "$repo" fetch --no-tags upstream main >/dev/null 2>&1 || return 1
+    [ "$(git -C "$repo" rev-parse refs/tags/3.2.0)" = "$fork_tag_sha" ] || return 1
+    [ "$(git -C "$repo" rev-parse refs/remotes/upstream/main)" = "$upstream_sha" ] || return 1
+    ! file_contains "$WORKFLOW" 'git fetch --force' || return 1
+    ! file_contains "$WORKFLOW" 'refs/tags/${{ steps.release.outputs.tag }}:refs/tags/upstream-release-${{ steps.release.outputs.tag }}'
+}
 
 test_merge_and_package_failure() {
     make_repo
@@ -56,9 +92,9 @@ test_workflow_contract() {
     file_contains "$WORKFLOW" '*/5 * * * *' || return 1; [ -z "$(awk '/^jobs:/{exit} /\$\{\{ runner\.temp \}\}/{print NR}' "$WORKFLOW")" ] || return 1; file_contains "$WORKFLOW" 'workflow_dispatch:' || return 1; file_contains "$WORKFLOW" 'cancel-in-progress: false' || return 1; file_contains "$WORKFLOW" 'WORKFLOW_TOKEN' || return 1; file_contains "$WORKFLOW" 'upstream-sync-lib.sh preflight' || return 1; file_contains "$WORKFLOW" 'upstream-sync-lib.sh package' || return 1; file_contains "$WORKFLOW" 'actions/upload-artifact@v4' || return 1; preflight_line="$(grep -n -m1 'upstream-sync-lib.sh preflight' "$WORKFLOW" | cut -d: -f1)"; push_line="$(grep -n -m1 'git push origin HEAD:singbox' "$WORKFLOW" | cut -d: -f1)"; [ -n "$preflight_line" ] && [ -n "$push_line" ] && [ "$preflight_line" -lt "$push_line" ] || return 1; file_contains "$WORKFLOW" 'git push origin HEAD:singbox'
 }
 
-test_upstream_tag_fetch_is_namespaced() {
+test_upstream_main_fetch_does_not_import_tags() {
     file_contains "$WORKFLOW" 'git fetch --no-tags upstream main' &&
-        file_contains "$WORKFLOW" 'git fetch --no-tags upstream "refs/tags/${{ steps.release.outputs.tag }}:refs/tags/upstream-release-${{ steps.release.outputs.tag }}"'
+        ! file_contains "$WORKFLOW" 'refs/tags/${{ steps.release.outputs.tag }}:refs/tags/upstream-release-${{ steps.release.outputs.tag }}'
 }
 
 test_checkout_and_readonly_resolver_use_fallback_token() {
@@ -188,8 +224,8 @@ EOF
 }
 
 run_case() { if "$1"; then pass "$1"; else fail "$1"; fi; }
-run_case test_resolver_stable; run_case test_merge_and_package_failure; run_case test_workflow_contract
-run_case test_upstream_tag_fetch_is_namespaced
+run_case test_resolver_stable; run_case test_historical_tag_collision_fetch_is_safe; run_case test_merge_and_package_failure; run_case test_workflow_contract
+run_case test_upstream_main_fetch_does_not_import_tags
 run_case test_checkout_and_readonly_resolver_use_fallback_token
 run_case test_push_uses_process_scoped_workflow_auth
 run_case test_push_auth_never_duplicates_checkout_extraheader
