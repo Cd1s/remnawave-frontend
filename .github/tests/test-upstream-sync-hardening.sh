@@ -94,6 +94,7 @@ test_workflow_contract() {
 
 test_upstream_main_fetch_does_not_import_tags() {
     file_contains "$WORKFLOW" 'git fetch --no-tags upstream main' &&
+        file_contains "$WORKFLOW" 'git fetch --no-tags upstream "$UPSTREAM_REF"' &&
         ! file_contains "$WORKFLOW" 'refs/tags/${{ steps.release.outputs.tag }}:refs/tags/upstream-release-${{ steps.release.outputs.tag }}'
 }
 
