@@ -20,12 +20,72 @@ interface ISchemaNode {
     properties?: Record<string, unknown>
 }
 
-interface JsonSchema {
-    [key: string]: unknown
-    definitions?: Record<string, ISchemaNode>
+interface IConfigSchema extends ISchemaNode {
+    $ref?: unknown
+    definitions?: Record<string, ISchemaNode | undefined>
 }
 
-const injectSnippetProperty = (node: ISchemaNode | undefined, snippetSchema: object): number => {
+const DEFINITIONS_REF_PREFIX = '#/definitions/'
+const PROTECTED_ROOT_KEYS = new Set(['api', 'inbounds', 'metrics', 'snippets', 'stats'])
+
+const CUSTOM_CORE_SCHEMA = {
+    title: 'Remnawave Custom Core',
+    markdownDescription: [
+        '**Remnawave custom field.** Not part of Xray-Core – it is handled by the Remnawave Node.',
+        '',
+        '> ⚠️ **Beta feature. Use strictly at your own risk.**',
+        '>',
+        '> It may be changed or removed at any time without prior notice.',
+        '',
+        'Replaces the Xray-Core binary on every node running this config profile with the one downloaded from `url`.',
+        '',
+        'The node verifies the `sha256` checksum before installing anything, keeps the bundled core untouched, and rolls back to it as soon as this section is removed.',
+        '',
+        '```json',
+        '{',
+        '  "geodata": {',
+        '    "core": {',
+        '      "url": "https://example.com/xray-linux-amd64",',
+        '      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"',
+        '    }',
+        '  }',
+        '}',
+        '```'
+    ].join('\n'),
+    type: 'object',
+    additionalProperties: false,
+    required: ['url', 'sha256'],
+    properties: {
+        url: {
+            title: 'Core URL',
+            markdownDescription: [
+                'Direct link to the Xray-Core binary to install on the node.',
+                '',
+                '> Only `https` is accepted. The file is downloaded on every node that runs this config profile.'
+            ].join('\n'),
+            type: 'string',
+            pattern: '^https://\\S+$',
+            patternErrorMessage: 'URL must start with https:// '
+        },
+        sha256: {
+            title: 'Core SHA-256',
+            markdownDescription: [
+                'SHA-256 checksum of the binary, 64 hexadecimal characters.',
+                '',
+                '> The node refuses to install the binary if the checksum does not match, so a wrong value here leaves the currently installed core in place.'
+            ].join('\n'),
+            type: 'string',
+            pattern: '^[A-Fa-f0-9]{64}$',
+            patternErrorMessage: 'SHA-256 must be exactly 64 hexadecimal characters'
+        }
+    }
+}
+
+const injectProperty = (
+    node: ISchemaNode | undefined,
+    propertyName: string,
+    propertySchema: object
+): number => {
     if (!node || typeof node !== 'object') {
         return 0
     }
@@ -33,15 +93,25 @@ const injectSnippetProperty = (node: ISchemaNode | undefined, snippetSchema: obj
     let injected = 0
 
     if (node.properties) {
-        node.properties.snippet = snippetSchema
+        node.properties[propertyName] = propertySchema
         injected += 1
     }
 
     for (const branch of [...(node.anyOf ?? []), ...(node.oneOf ?? []), ...(node.allOf ?? [])]) {
-        injected += injectSnippetProperty(branch, snippetSchema)
+        injected += injectProperty(branch, propertyName, propertySchema)
     }
 
     return injected
+}
+
+const resolveRootNode = (schema: IConfigSchema | undefined): ISchemaNode | undefined => {
+    const ref = schema?.$ref
+
+    if (typeof ref === 'string' && ref.startsWith(DEFINITIONS_REF_PREFIX)) {
+        return schema?.definitions?.[ref.slice(DEFINITIONS_REF_PREFIX.length)]
+    }
+
+    return schema?.properties ? schema : undefined
 }
 
 export const MonacoSetupFeature = {
@@ -54,9 +124,9 @@ export const MonacoSetupFeature = {
         try {
             const snippetNames = snippets.map((s) => s.name)
 
-            let schema: JsonSchema
+            let schema: IConfigSchema
             if (coreType === CONFIG_CORE_TYPE.SINGBOX) {
-                schema = structuredClone(singBoxSchemaSource) as JsonSchema
+                schema = structuredClone(singBoxSchemaSource) as IConfigSchema
             } else {
                 let { jsonSchemaUrl } = app.configEditor
                 switch (currentLanguage) {
@@ -67,8 +137,8 @@ export const MonacoSetupFeature = {
                         jsonSchemaUrl = app.configEditor.jsonSchemaUrl
                 }
 
-                const response = await axios.get<JsonSchema>(jsonSchemaUrl)
-                schema = await response.data
+                const response = await axios.get<IConfigSchema>(jsonSchemaUrl)
+                schema = response.data
             }
 
             const snippetDescriptions = snippets.map((snippet) => {
@@ -92,22 +162,80 @@ export const MonacoSetupFeature = {
                     'Snippet name can only contain: letters, numbers, spaces, _ and -'
             }
 
+            const rootSnippetsSchema = {
+                name: 'snippets',
+                title: 'Remnawave Snippets',
+                markdownDescription: [
+                    'Snippets merged into the **root** of this config.',
+                    '',
+                    'Every object of a listed snippet must hold root-level sections, for example:',
+                    '```json',
+                    '[{ "log": { "loglevel": "debug" } }]',
+                    '```',
+                    'Sections already written in this config are kept – a snippet never overwrites them.',
+                    '',
+                    '`inbounds`, `api`, `stats` and `metrics` are always skipped.'
+                ].join('\n'),
+                type: 'array',
+                items: {
+                    ...snippetSchema,
+                    title: 'Snippet name'
+                },
+                minItems: 1
+            }
+
+            const rootNode = resolveRootNode(schema)
+
             if (coreType === CONFIG_CORE_TYPE.SINGBOX) {
-                for (const definition of ['taggedObject', 'snippetObject'] as const) {
-                    injectSnippetProperty(schema.definitions?.[definition], snippetSchema)
+                const notInjected: string[] = (['taggedObject', 'snippetObject'] as const).filter(
+                    (definition) =>
+                        injectProperty(
+                            schema.definitions?.[definition],
+                            'snippet',
+                            snippetSchema
+                        ) === 0
+                )
+
+                if (injectProperty(rootNode, 'snippets', rootSnippetsSchema) === 0) {
+                    notInjected.push('config root')
+                }
+
+                if (notInjected.length > 0) {
+                    consola.error(
+                        `Failed to inject the snippet property into the sing-box schema: ${notInjected.join(', ')}.`
+                    )
                 }
             } else {
-                const notInjected = (
+                const notInjected: string[] = (
                     ['OutboundObject', 'RuleObject', 'BalancerObject'] as const
                 ).filter(
                     (definition) =>
-                        injectSnippetProperty(schema.definitions?.[definition], snippetSchema) === 0
+                        injectProperty(
+                            schema.definitions?.[definition],
+                            'snippet',
+                            snippetSchema
+                        ) === 0
                 )
+
+                if (injectProperty(rootNode, 'snippets', rootSnippetsSchema) === 0) {
+                    notInjected.push('config root')
+                }
 
                 if (notInjected.length > 0) {
                     consola.error(
                         `Failed to inject the snippet property into the Xray schema: ${notInjected.join(', ')}.`
                     )
+                }
+
+                if (
+                    injectProperty(
+                        schema.definitions?.GeodataObject,
+                        'core',
+                        CUSTOM_CORE_SCHEMA
+                    ) === 0 &&
+                    rootNode?.properties?.geodata
+                ) {
+                    consola.error('Failed to inject the custom core property into GeodataObject.')
                 }
             }
 
@@ -132,6 +260,7 @@ export const MonacoSetupFeature = {
         }
     }
 }
+
 export const MonacoSetupSnippetsFeature = {
     setup: async (monaco: Monaco, currentLanguage: string) => {
         try {
@@ -147,10 +276,14 @@ export const MonacoSetupSnippetsFeature = {
             const response = await axios.get(jsonSchemaUrl)
             const schema = await response.data
 
+            const rootNode = resolveRootNode(schema)
+
+            injectProperty(schema.definitions?.GeodataObject, 'core', CUSTOM_CORE_SCHEMA)
+
             const snippetArraySchema = {
                 $schema: 'http://json-schema.org/draft-07/schema#',
                 title: 'Snippet Array',
-                description: 'Array of Outbound, Rule or Balancer objects for snippets',
+                description: 'Array of Root, Outbound, Rule or Balancer objects for snippets',
                 type: 'array',
                 items: {
                     oneOf: [
@@ -168,7 +301,24 @@ export const MonacoSetupSnippetsFeature = {
                             ...schema.definitions?.BalancerObject,
                             title: 'Balancer Object',
                             description: 'Balancer configuration (for routing.balancers[])'
-                        }
+                        },
+                        ...(rootNode?.properties
+                            ? [
+                                  {
+                                      ...rootNode,
+                                      properties: Object.fromEntries(
+                                          Object.entries(rootNode.properties).filter(
+                                              ([key]) => !PROTECTED_ROOT_KEYS.has(key)
+                                          )
+                                      ),
+                                      title: 'Root Object',
+                                      description:
+                                          'Root-level sections (for configs referencing this snippet in the root "snippets" array)',
+                                      markdownDescription:
+                                          'Root-level sections, merged into the **root** of every config that lists this snippet in its root `snippets` array. \n\n\n`inbounds`, `api`, `stats` and `metrics` cannot be provided by a snippet.'
+                                  }
+                              ]
+                            : [])
                     ]
                 },
                 minItems: 1,
