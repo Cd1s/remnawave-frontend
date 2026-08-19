@@ -47,6 +47,7 @@ import {
     PiTag
 } from 'react-icons/pi'
 import {
+    TbArrowsExchange,
     TbCirclesRelation,
     TbCloudNetwork,
     TbEye,
@@ -56,6 +57,7 @@ import {
     TbStar
 } from 'react-icons/tb'
 
+import { showModal } from '@shared/_modals/show-modal'
 import { useIsMobile } from '@shared/hooks'
 import { ChipMultiSelect } from '@shared/ui/chip-multi-select'
 import { DrawerFooter } from '@shared/ui/drawer-footer'
@@ -130,6 +132,20 @@ export const BaseHostForm = <
         [SECURITY_LAYERS.TLS]: t('base-host-form.tls-transport-layer-security'),
         [SECURITY_LAYERS.NONE]: t('base-host-form.none'),
         [SECURITY_LAYERS.DEFAULT]: t('base-host-form.inbounds-default')
+    }
+
+    const resolveSelectedRawInbound = () => {
+        const { inbound } = form.getValues()
+
+        if (!inbound?.configProfileUuid || !inbound.configProfileInboundUuid) {
+            return undefined
+        }
+
+        return configProfiles
+            ?.find((configProfile) => configProfile.uuid === inbound.configProfileUuid)
+            ?.inbounds.find(
+                (profileInbound) => profileInbound.uuid === inbound.configProfileInboundUuid
+            )?.rawInbound
     }
 
     const isXhttpExtraButtonDisabled = () => {
@@ -1033,6 +1049,23 @@ export const BaseHostForm = <
                                             </Button>
                                         </Group>
                                     </SectionCard.Section>
+
+                                    <SectionCard.Section>
+                                        <Button
+                                            color="gray"
+                                            fullWidth
+                                            leftSection={<TbArrowsExchange />}
+                                            onClick={() => {
+                                                showModal('hosts_hostMapperModal', {
+                                                    form,
+                                                    rawInbound: resolveSelectedRawInbound()
+                                                })
+                                            }}
+                                            variant="soft"
+                                        >
+                                            {t('base-host-form.mapper')}
+                                        </Button>
+                                    </SectionCard.Section>
                                 </SectionCard.Root>
 
                                 <SectionCard.Root>
@@ -1273,6 +1306,7 @@ export const BaseHostForm = <
                             loading={isSubmitting}
                             size="md"
                             type="submit"
+                            variant="soft"
                         >
                             {t('common.save')}
                         </Button>

@@ -1,17 +1,18 @@
-import { Monaco } from '@monaco-editor/react'
 import {
+    GetSharedListsCommand,
     GetSnippetsCommand,
+    HostMapperSchema,
     ResponseRulesConfigSchema,
     TSubscriptionTemplateType
 } from '@remnawave/backend-contract'
-import { NodePluginSchema } from '@remnawave/node-plugins'
+import { NodePluginEditorSchema, SharedListConfigSchema } from '@remnawave/node-plugins'
 import axios from 'axios'
 import consola from 'consola'
 import { app } from 'src/config'
 
 import { CONFIG_CORE_TYPE, TCoreType } from '@shared/api/contracts/core-contract'
-import { monacoTheme } from '@shared/constants/monaco-theme'
 import singBoxSchemaSource from '@shared/schemas/singbox.schema.json'
+import { registerJsonSchema } from '@shared/utils/monaco/json-schema-registry'
 
 interface ISchemaNode {
     allOf?: ISchemaNode[]
@@ -104,6 +105,74 @@ const injectProperty = (
     return injected
 }
 
+const MAX_INBOUND_PATHS = 400
+const MAX_INBOUND_DEPTH = 10
+const MAX_INBOUND_VALUE_PREVIEW = 400
+
+const collectInboundPaths = (
+    value: unknown,
+    prefix: string,
+    depth: number,
+    collected: Map<string, unknown>
+) => {
+    if (collected.size >= MAX_INBOUND_PATHS || depth > MAX_INBOUND_DEPTH) return
+    if (value === null || typeof value !== 'object') return
+
+    const entries = Array.isArray(value)
+        ? value.map((item, index) => [String(index), item] as const)
+        : Object.entries(value as Record<string, unknown>)
+
+    for (const [key, child] of entries) {
+        if (collected.size >= MAX_INBOUND_PATHS) return
+
+        const path = prefix ? `${prefix}.${key}` : key
+
+        collected.set(path, child)
+        collectInboundPaths(child, path, depth + 1, collected)
+    }
+}
+
+const injectInboundPaths = (schema: unknown, rawInbound: unknown) => {
+    const collected = new Map<string, unknown>()
+    collectInboundPaths(rawInbound, '', 0, collected)
+
+    if (collected.size === 0) return
+
+    const snippets = [...collected.entries()].map(([path, value]) => {
+        const json = JSON.stringify(value, null, 2) ?? 'undefined'
+        const preview =
+            json.length > MAX_INBOUND_VALUE_PREVIEW
+                ? `${json.slice(0, MAX_INBOUND_VALUE_PREVIEW)}\n…`
+                : json
+
+        return {
+            label: path,
+            body: path,
+            markdownDescription: [
+                '',
+                'Current value in the inbound:',
+                '',
+                '```json',
+                preview,
+                '```'
+            ].join('\n')
+        }
+    })
+
+    const properties = (schema as { properties?: Record<string, { items?: ISchemaNode }> })
+        .properties
+
+    for (const client of ['xrayJson', 'mihomo', 'base64']) {
+        for (const branch of properties?.[client]?.items?.oneOf ?? []) {
+            const from = branch.properties?.from as Record<string, unknown> | undefined
+
+            if (!from) continue
+
+            from.defaultSnippets = snippets
+        }
+    }
+}
+
 const resolveRootNode = (schema: IConfigSchema | undefined): ISchemaNode | undefined => {
     const ref = schema?.$ref
 
@@ -116,7 +185,6 @@ const resolveRootNode = (schema: IConfigSchema | undefined): ISchemaNode | undef
 
 export const MonacoSetupFeature = {
     setup: async (
-        monaco: Monaco,
         currentLanguage: string,
         snippets: GetSnippetsCommand.Response['response']['snippets'],
         coreType: TCoreType
@@ -239,21 +307,15 @@ export const MonacoSetupFeature = {
                 }
             }
 
-            monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
-                allowComments: false,
-                enableSchemaRequest: true,
-                schemaRequest: 'warning',
-                schemas: [
-                    {
-                        fileMatch: ['*'],
-                        schema,
-                        uri:
-                            coreType === CONFIG_CORE_TYPE.SINGBOX
-                                ? 'https://sing-box-config-schema.json'
-                                : 'https://xray-config-schema.json'
-                    }
+            registerJsonSchema({
+                fileMatch: [
+                    coreType === CONFIG_CORE_TYPE.SINGBOX ? 'singbox-config://*' : 'xray-config://*'
                 ],
-                validate: true
+                schema,
+                uri:
+                    coreType === CONFIG_CORE_TYPE.SINGBOX
+                        ? 'https://sing-box-config-schema.json'
+                        : 'https://xray-config-schema.json'
             })
         } catch (error) {
             consola.error('Failed to load JSON schema:', error)
@@ -262,7 +324,7 @@ export const MonacoSetupFeature = {
 }
 
 export const MonacoSetupSnippetsFeature = {
-    setup: async (monaco: Monaco, currentLanguage: string) => {
+    setup: async (currentLanguage: string) => {
         try {
             let { jsonSchemaUrl } = app.configEditor
             switch (currentLanguage) {
@@ -325,18 +387,10 @@ export const MonacoSetupSnippetsFeature = {
                 definitions: schema.definitions || {}
             }
 
-            monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
-                allowComments: false,
-                enableSchemaRequest: true,
-                schemaRequest: 'warning',
-                schemas: [
-                    {
-                        fileMatch: ['snippet://*'],
-                        schema: snippetArraySchema,
-                        uri: 'https://snippet-schema.json'
-                    }
-                ],
-                validate: true
+            registerJsonSchema({
+                fileMatch: ['snippet://*'],
+                schema: snippetArraySchema,
+                uri: 'https://snippet-schema.json'
             })
 
             return snippetArraySchema
@@ -348,10 +402,7 @@ export const MonacoSetupSnippetsFeature = {
 }
 
 export const MonacoSetupResponseRulesFeature = {
-    setup: async (
-        monaco: Monaco,
-        groupedTemplates: Record<TSubscriptionTemplateType, string[]>
-    ) => {
+    setup: async (groupedTemplates: Record<TSubscriptionTemplateType, string[]>) => {
         try {
             const schema = ResponseRulesConfigSchema.toJSONSchema({
                 target: 'draft-07'
@@ -430,81 +481,124 @@ export const MonacoSetupResponseRulesFeature = {
                 })
             }
 
-            monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
-                schemaValidation: 'error',
-                comments: 'error',
-                trailingCommas: 'error',
-
-                schemas: [
-                    {
-                        fileMatch: ['response-rules://*'],
-                        schema,
-                        uri: 'https://response-rules-schema.json'
-                    }
-                ],
-                validate: true
-            })
-
-            monaco.languages.json.jsonDefaults.setModeConfiguration({
-                documentFormattingEdits: true,
-                documentRangeFormattingEdits: true,
-                completionItems: true,
-                hovers: true,
-                documentSymbols: true,
-                tokens: true,
-                colors: true,
-                foldingRanges: true,
-                diagnostics: true,
-                selectionRanges: true
-            })
-
-            monaco.editor.defineTheme('GithubDark', {
-                ...monacoTheme,
-                base: 'vs-dark'
-            })
+            registerJsonSchema(
+                {
+                    fileMatch: ['response-rules://*'],
+                    schema,
+                    uri: 'https://response-rules-schema.json'
+                },
+                {
+                    comments: 'error',
+                    schemaValidation: 'error',
+                    trailingCommas: 'error'
+                }
+            )
         } catch (error) {
             consola.error('Failed to load JSON schema:', error)
         }
     }
 }
 
-export const MonacoSetupNodePluginEditorFeature = {
-    setup: async (monaco: Monaco) => {
+export const MonacoSetupHostMapperEditorFeature = {
+    setup: async (rawInbound?: unknown) => {
         try {
-            const schema = NodePluginSchema.toJSONSchema()
+            const schema = HostMapperSchema.toJSONSchema({ target: 'draft-07' })
 
-            monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
-                schemaValidation: 'error',
-                comments: 'error',
-                trailingCommas: 'error',
+            injectInboundPaths(schema, rawInbound)
 
-                schemas: [
-                    {
-                        fileMatch: ['node-plugin://*'],
-                        schema,
-                        uri: 'https://node-plugin-schema.json'
-                    }
-                ],
-                validate: true
-            })
+            registerJsonSchema(
+                {
+                    fileMatch: ['host-mapper://*'],
+                    schema,
+                    uri: 'https://host-mapper-schema.json'
+                },
+                {
+                    comments: 'error',
+                    schemaValidation: 'error',
+                    trailingCommas: 'error'
+                }
+            )
+        } catch (error) {
+            consola.error('Failed to load JSON schema:', error)
+        }
+    }
+}
 
-            monaco.languages.json.jsonDefaults.setModeConfiguration({
-                documentFormattingEdits: true,
-                documentRangeFormattingEdits: true,
-                completionItems: true,
-                hovers: true,
-                documentSymbols: true,
-                tokens: true,
-                colors: true,
-                foldingRanges: true,
-                diagnostics: true,
-                selectionRanges: true
-            })
+type TSharedLists = GetSharedListsCommand.Response['response']['sharedLists']
 
-            monaco.editor.defineTheme('GithubDark', {
-                ...monacoTheme,
-                base: 'vs-dark'
-            })
+const buildSharedListDescription = (sharedList: TSharedLists[number]): string => {
+    const { type, itemsCount } = sharedList
+
+    return `**${type}** · ${itemsCount} item${itemsCount === 1 ? '' : 's'}`
+}
+
+const injectSharedListNames = (node: unknown, sharedLists: TSharedLists): void => {
+    if (!node || typeof node !== 'object') return
+
+    if (Array.isArray(node)) {
+        node.forEach((item) => injectSharedListNames(item, sharedLists))
+        return
+    }
+
+    const schemaNode = node as Record<string, unknown>
+
+    if (schemaNode.type === 'string' && String(schemaNode.pattern ?? '').startsWith('^ext:')) {
+        delete schemaNode.pattern
+
+        schemaNode.enum = sharedLists.map((sharedList) => `ext:${sharedList.name}`)
+        schemaNode.markdownEnumDescriptions = sharedLists.map(buildSharedListDescription)
+        schemaNode.title = 'Shared List'
+        schemaNode.markdownDescription =
+            sharedLists.length > 0
+                ? 'Reference to a shared list. Manage lists in **Shared Lists**.'
+                : 'No shared lists created yet. Create one in **Shared Lists** first.'
+        return
+    }
+
+    Object.values(schemaNode).forEach((value) => injectSharedListNames(value, sharedLists))
+}
+
+export const MonacoSetupNodePluginEditorFeature = {
+    setup: async (sharedLists: TSharedLists = []) => {
+        try {
+            const schema = NodePluginEditorSchema.toJSONSchema()
+
+            injectSharedListNames(schema, sharedLists)
+
+            registerJsonSchema(
+                {
+                    fileMatch: ['node-plugin://*'],
+                    schema,
+                    uri: 'https://node-plugin-schema.json'
+                },
+                {
+                    comments: 'error',
+                    schemaValidation: 'error',
+                    trailingCommas: 'error'
+                }
+            )
+        } catch (error) {
+            consola.error('Failed to load JSON schema:', error)
+        }
+    }
+}
+
+export const MonacoSetupSharedListEditorFeature = {
+    setup: () => {
+        try {
+            const schema = SharedListConfigSchema.toJSONSchema()
+            registerJsonSchema(
+                {
+                    fileMatch: ['shared-list://*'],
+                    schema,
+                    uri: 'https://shared-list-schema.json'
+                },
+                {
+                    comments: 'error',
+                    schemaValidation: 'error',
+                    trailingCommas: 'error'
+                }
+            )
         } catch (error) {
             consola.error('Failed to load JSON schema:', error)
         }

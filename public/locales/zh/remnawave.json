@@ -80,7 +80,11 @@
     "processing": "处理中",
     "operation-completed": "操作已完成",
     "usage-stats": "流量使用统计",
-    "active-sessions": "活跃会话"
+    "active-sessions": "活跃会话",
+    "shared-lists": "共享列表",
+    "try-again": "再试一次",
+    "interface": "接口",
+    "ip-address": "IP 地址"
   },
   "bandwidth-metrics": {
     "current-year": "今年",
@@ -441,7 +445,8 @@
     "hidden-host-description": "默认情况下，Remnawave 将不会在订阅中包含隐藏主机。隐藏主机可以在 Mihomo 和 Xray-Json Advant, Raw 中使用",
     "server-description-1": "在支持的客户端中，协议名称(例如无)将被此处指定的描述所取代。",
     "server-description-2": "并非所有客户端应用程序都支持此功能。欲了解更多详情，请参阅下面列出的应用程序的文档。",
-    "supported-clients": "支持的客户端"
+    "supported-clients": "支持的客户端",
+    "mapper": "映射"
   },
   "base-node-form": {
     "country": "国家",
@@ -757,7 +762,6 @@
       "progress": "已完成 {{completed}} 个，共 {{total}} 个",
       "job-failed": "任务失败",
       "job-failed-description": "无法获取活动会话",
-      "try-again": "重试",
       "clear": "清除",
       "no-active-sessions": "没有活跃的会话",
       "no-active-sessions-description": "未找到此用户的活跃IP地址。",
@@ -985,7 +989,6 @@
       "widget": {
         "infra-provider": "网络提供商",
         "name-description": "提供商名称。用于在界面中识别该提供商。",
-        "name": "名称",
         "enter-provider-name": "输入提供商名称",
         "favicon-link": "Favicon 链接",
         "enter-favicon-link": "输入 Favicon 链接",
@@ -1343,8 +1346,7 @@
       "system": "系统",
       "system-uptime": "系统运行时间",
       "network": "网络",
-      "kernel": "内核",
-      "interface": "接口"
+      "kernel": "内核"
     }
   },
   "node-stats": {
@@ -1391,7 +1393,6 @@
       "subscription-request-history": "订阅请求历史",
       "nothing-to-show": "没有要显示的内容...",
       "request-at": "请求时间",
-      "ip-address": "IP 地址",
       "user-agent": "User Agent",
       "request-history": "请求历史"
     }
@@ -1469,9 +1470,7 @@
         "snippet-is-valid": "代码块有效",
         "edit-snippet": "编辑代码块",
         "snippets": "代码块",
-        "new-snippet": "新建代码块",
-        "sync-nodes-description": "节点仍在运行旧配置。是否立即重启受影响的节点以应用更改？",
-        "sync-nodes-cancel": "暂不需要"
+        "new-snippet": "新建代码块"
       }
     }
   },
@@ -1768,7 +1767,6 @@
   },
   "use-nodes-table-widget": {
     "online": "在线",
-    "name": "名称",
     "address": "地址",
     "ip-addresses": "IP 地址",
     "traffic-used": "流量使用",
@@ -2271,5 +2269,51 @@
       "no-active-config-profile": "此节点没有激活的配置文件",
       "linked": "已关联"
     }
+  },
+  "node-integrations": {
+    "modal": {
+      "title": "节点集合",
+      "delete-description": "集合将从所有节点中移除，受影响的节点将重新启动。"
+    },
+    "editor": {
+      "description": "描述",
+      "description-placeholder": "这个集合做了什么",
+      "config-must-be-an-object": "配置必须是JSON对象"
+    },
+    "select": {
+      "label": "集合",
+      "placeholder": "选择集合"
+    }
+  },
+  "shared-lists": {
+    "modal": {
+      "subtitle": "可重用的 IP 和 ASN 列表，插件引用为 ext:name",
+      "delete-description": "列表将被删除。插件引用它保持范围：引用并在修复之前失败验证。"
+    },
+    "editor": {
+      "name-description": "插件中引用为 ext:name。以后无法更改。"
+    }
+  },
+  "apply-to-nodes": {
+    "title": "是否应用到节点？",
+    "apply": "立即应用",
+    "apply-description": "受影响的节点立即收到新的配置。",
+    "later": "以后再说",
+    "later-description": "更改已保存，但节点保留当前版本，直到下次同步或重新启动。"
+  },
+  "node-geocheck": {
+    "title": "地理检测",
+    "source-default": "默认",
+    "default-placeholder": "自动化",
+    "default-description": "节点将使用默认的出站路由。",
+    "ip-description": "选择一个节点IP或输入任何地址",
+    "interface-description": "选择一个节点接口或输入任意名称",
+    "run": "运行检查",
+    "running": "正在运行地理检测",
+    "running-description": "该节点正在探索其连接性，这通常需要一分钟。",
+    "failed-description": "节点无法完成地理检测。",
+    "view-image": "反馈",
+    "no-image": "报告中没有图片，打开 JSON",
+    "requires-node-version": "需要 Remnawave Node {{version}} 或更高版本"
   }
 }
