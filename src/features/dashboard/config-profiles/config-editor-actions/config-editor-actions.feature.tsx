@@ -105,7 +105,7 @@ export function ConfigEditorActionsFeature(props: Props) {
             notifications.show({
                 color: 'red',
                 message: t('config-editor-actions.feature.failed-to-save-invalid-json'),
-                title: t('config-editor-actions.feature.error')
+                title: t('common.message.error')
             })
             return
         }
@@ -193,7 +193,7 @@ export function ConfigEditorActionsFeature(props: Props) {
                 onClick={handleSave}
                 variant="soft"
             >
-                {t('common.save')}
+                {t('common.action.save')}
             </Button>
 
             {!isConfigValid && !isUpdating && (
@@ -204,7 +204,7 @@ export function ConfigEditorActionsFeature(props: Props) {
                     loading={isUpdating}
                     onClick={() => {
                         modals.openConfirmModal({
-                            title: t('common.confirm-action'),
+                            title: t('common.action.confirm-action'),
                             children: (
                                 <Text>
                                     {t('config-editor-actions.feature.save-anyway-description')}
@@ -212,8 +212,8 @@ export function ConfigEditorActionsFeature(props: Props) {
                             ),
                             centered: true,
                             labels: {
-                                confirm: t('common.save'),
-                                cancel: t('common.cancel')
+                                confirm: t('common.action.save'),
+                                cancel: t('common.action.cancel')
                             },
                             confirmProps: {
                                 color: 'red'
@@ -255,7 +255,7 @@ export function ConfigEditorActionsFeature(props: Props) {
                                     }
                                     onClick={copy}
                                 >
-                                    {t('common.copy-uuid')}
+                                    {t('common.action.copy-uuid')}
                                 </Menu.Item>
                             )}
                         </CopyButton>
@@ -272,7 +272,7 @@ export function ConfigEditorActionsFeature(props: Props) {
                             leftSection={<TbSelectAll size={14} />}
                             onClick={handleSelectAll}
                         >
-                            {t('config-editor-actions.feature.select-all')}
+                            {t('common.action.select-all')}
                         </Menu.Item>
 
                         <Menu.Item leftSection={<TbCut size={14} />} onClick={handleCut}>
@@ -314,7 +314,7 @@ export function ConfigEditorActionsFeature(props: Props) {
                                     leftSection={<TbDownload size={14} />}
                                     onClick={openDownloadModal}
                                 >
-                                    {t('config-editor-actions.feature.load-from-github')}
+                                    {t('common.action.load-from-github')}
                                 </Menu.Item>
                             </>
                         )}

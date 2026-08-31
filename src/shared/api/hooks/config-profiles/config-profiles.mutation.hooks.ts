@@ -1,7 +1,9 @@
 import { notifications } from '@mantine/notifications'
 import {
     DeleteConfigProfileCommand,
-    ReorderConfigProfileCommand
+    ReorderConfigProfileCommand,
+    SetConfigProfileTagsCommand,
+
 } from '@remnawave/backend-contract'
 
 import {
@@ -91,6 +93,23 @@ export const useReorderConfigProfiles = createMutationHook({
         onError: (error) => {
             notifications.show({
                 title: `Reorder Config Profiles`,
+                message:
+                    error instanceof Error ? error.message : `Request failed with unknown error.`,
+                color: 'red'
+            })
+        }
+    }
+})
+
+export const useSetConfigProfilesTags = createMutationHook({
+    endpoint: SetConfigProfileTagsCommand.TSQ_url,
+    bodySchema: SetConfigProfileTagsCommand.RequestBodySchema,
+    responseSchema: SetConfigProfileTagsCommand.ResponseSchema,
+    requestMethod: SetConfigProfileTagsCommand.endpointDetails.REQUEST_METHOD,
+    rMutationParams: {
+        onError: (error) => {
+            notifications.show({
+                title: 'Update tags',
                 message:
                     error instanceof Error ? error.message : `Request failed with unknown error.`,
                 color: 'red'
