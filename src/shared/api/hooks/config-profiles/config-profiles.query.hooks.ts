@@ -2,7 +2,6 @@ import { createQueryKeys } from '@lukemorales/query-key-factory'
 import {
     GetComputedConfigProfileByUuidCommand,
     GetConfigProfileByUuidCommand,
-
     GetConfigProfilesTagsCommand,
     GetInboundsByProfileUuidCommand
 } from '@remnawave/backend-contract'

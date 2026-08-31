@@ -2,8 +2,7 @@ import { notifications } from '@mantine/notifications'
 import {
     DeleteConfigProfileCommand,
     ReorderConfigProfileCommand,
-    SetConfigProfileTagsCommand,
-
+    SetConfigProfileTagsCommand
 } from '@remnawave/backend-contract'
 
 import {
