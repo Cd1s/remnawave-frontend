@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "sing-box 1.13 configuration",
+  "title": "sing-box 1.14 configuration",
   "description": "Focused Remnawave schema for sing-box server profiles. Unknown sing-box fields remain allowed.",
   "type": "object",
   "required": ["inbounds"],
