@@ -9,6 +9,55 @@ import { CONFIG_CORE_TYPE, TCoreType } from '@shared/api/contracts/core-contract
 
 const PROTECTED_ROOT_KEYS = new Set(['api', 'inbounds', 'metrics', 'snippets', 'stats'])
 
+// Keep in sync with the backend sing-box inbound rules (singbox-inbound.ts).
+const SINGBOX_TLS_REQUIRED_TYPES = new Set(['anytls', 'hysteria2', 'tuic'])
+const SINGBOX_SS2022_METHODS = new Set(['2022-blake3-aes-256-gcm'])
+const SINGBOX_SS_METHODS = new Set([
+    ...SINGBOX_SS2022_METHODS,
+    'aes-128-gcm',
+    'aes-192-gcm',
+    'aes-256-gcm',
+    'chacha20-ietf-poly1305',
+    'xchacha20-ietf-poly1305'
+])
+
+const isSs2022Key = (value: unknown): boolean => {
+    if (typeof value !== 'string' || !/^[A-Za-z0-9+/]+={0,2}$/.test(value)) return false
+    try {
+        return atob(value).length === 32
+    } catch {
+        return false
+    }
+}
+
+interface ISingBoxInboundDraft {
+    method?: unknown
+    password?: unknown
+    tag: string
+    tls?: { enabled?: unknown }
+    type: string
+}
+
+const getSingBoxInboundError = (inbound: ISingBoxInboundDraft): null | string => {
+    if (SINGBOX_TLS_REQUIRED_TYPES.has(inbound.type) && inbound.tls?.enabled !== true) {
+        return `${inbound.type} inbound "${inbound.tag}" requires tls.enabled: true.`
+    }
+
+    if (inbound.type !== 'shadowsocks') return null
+
+    const method = typeof inbound.method === 'string' ? inbound.method : ''
+
+    if (!SINGBOX_SS_METHODS.has(method)) {
+        return `Shadowsocks inbound "${inbound.tag}" method must be one of: ${[...SINGBOX_SS_METHODS].join(', ')}.`
+    }
+
+    if (SINGBOX_SS2022_METHODS.has(method) && !isSs2022Key(inbound.password)) {
+        return `Shadowsocks inbound "${inbound.tag}" requires a base64 32-byte server key in password.`
+    }
+
+    return null
+}
+
 const replaceSnippetsInRoot = (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     config: any,
@@ -137,10 +186,9 @@ export const ConfigValidationFeature = {
                     }
                     seenTags.add(inbound.tag)
 
-                    if (inbound.type === 'anytls' && inbound.tls?.enabled !== true) {
-                        setResult(
-                            `${dayjs().format('HH:mm:ss')} | AnyTLS requires tls.enabled: true.`
-                        )
+                    const inboundError = getSingBoxInboundError(inbound)
+                    if (inboundError) {
+                        setResult(`${dayjs().format('HH:mm:ss')} | ${inboundError}`)
                         setIsConfigValid(false)
                         return
                     }

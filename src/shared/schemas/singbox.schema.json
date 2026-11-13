@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "sing-box 1.13 configuration",
+  "title": "sing-box 1.14 configuration",
   "description": "Focused Remnawave schema for sing-box server profiles. Unknown sing-box fields remain allowed.",
   "type": "object",
   "required": ["inbounds"],
@@ -26,6 +26,8 @@
           { "$ref": "#/definitions/vlessInbound" },
           { "$ref": "#/definitions/trojanInbound" },
           { "$ref": "#/definitions/shadowsocksInbound" },
+          { "$ref": "#/definitions/hysteria2Inbound" },
+          { "$ref": "#/definitions/tuicInbound" },
           { "$ref": "#/definitions/genericInbound" }
         ]
       }
@@ -105,7 +107,44 @@
             }
           ]
         },
-        "key_path": { "type": "string" }
+        "key_path": { "type": "string" },
+        "reality": { "$ref": "#/definitions/realityInbound" }
+      }
+    },
+    "realityInbound": {
+      "type": "object",
+      "required": ["enabled", "handshake", "private_key"],
+      "additionalProperties": true,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "handshake": {
+          "type": "object",
+          "required": ["server"],
+          "additionalProperties": true,
+          "properties": {
+            "server": { "type": "string" },
+            "server_port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            }
+          }
+        },
+        "private_key": {
+          "type": "string",
+          "description": "sing-box generate reality-keypair. Subscriptions publish the derived public key."
+        },
+        "short_id": {
+          "oneOf": [
+            { "type": "string" },
+            {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          ],
+          "description": "Subscriptions publish the first short ID."
+        },
+        "max_time_difference": { "type": "string" }
       }
     },
     "userPassword": {
@@ -136,7 +175,29 @@
           "type": "string",
           "description": "Managed by Remnawave when users are injected."
         },
-        "flow": { "type": "string" }
+        "flow": {
+          "type": "string",
+          "description": "Managed by Remnawave: xtls-rprx-vision for VLESS over TCP with TLS or Reality and without transport or multiplex."
+        }
+      }
+    },
+    "userUuidPassword": {
+      "type": "object",
+      "required": ["uuid", "password"],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Managed by Remnawave when users are injected."
+        },
+        "uuid": {
+          "type": "string",
+          "description": "Managed by Remnawave when users are injected."
+        },
+        "password": {
+          "type": "string",
+          "description": "Managed by Remnawave when users are injected."
+        }
       }
     },
     "transport": {
@@ -248,11 +309,86 @@
           "minimum": 1,
           "maximum": 65535
         },
-        "method": { "type": "string" },
+        "method": {
+          "enum": [
+            "2022-blake3-aes-256-gcm",
+            "aes-128-gcm",
+            "aes-192-gcm",
+            "aes-256-gcm",
+            "chacha20-ietf-poly1305",
+            "xchacha20-ietf-poly1305"
+          ],
+          "description": "SS2022 multi-user needs AES identity headers and 32-byte user keys (the Remnawave ssPassword), so only 2022-blake3-aes-256-gcm is supported among 2022 methods."
+        },
+        "password": {
+          "type": "string",
+          "description": "Required for 2022 methods: base64 32-byte server key (sing-box generate rand --base64 32)."
+        },
         "users": {
           "type": "array",
           "items": { "$ref": "#/definitions/userPassword" }
         }
+      }
+    },
+    "hysteria2Inbound": {
+      "title": "Hysteria2 inbound",
+      "type": "object",
+      "required": ["type", "tag", "listen_port", "users", "tls"],
+      "additionalProperties": true,
+      "properties": {
+        "type": { "const": "hysteria2" },
+        "tag": { "$ref": "#/definitions/tag" },
+        "listen": { "type": "string" },
+        "listen_port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "users": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/userPassword" }
+        },
+        "obfs": {
+          "type": "object",
+          "required": ["type", "password"],
+          "additionalProperties": true,
+          "properties": {
+            "type": { "enum": ["salamander", "gecko"] },
+            "password": { "type": "string" },
+            "min_packet_size": { "type": "integer" },
+            "max_packet_size": { "type": "integer" }
+          }
+        },
+        "up_mbps": { "type": "integer", "minimum": 0 },
+        "down_mbps": { "type": "integer", "minimum": 0 },
+        "ignore_client_bandwidth": { "type": "boolean" },
+        "masquerade": {},
+        "tls": { "$ref": "#/definitions/tlsInbound" }
+      }
+    },
+    "tuicInbound": {
+      "title": "TUIC inbound",
+      "type": "object",
+      "required": ["type", "tag", "listen_port", "users", "tls"],
+      "additionalProperties": true,
+      "properties": {
+        "type": { "const": "tuic" },
+        "tag": { "$ref": "#/definitions/tag" },
+        "listen": { "type": "string" },
+        "listen_port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "users": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/userUuidPassword" }
+        },
+        "congestion_control": { "enum": ["cubic", "new_reno", "bbr"] },
+        "auth_timeout": { "type": "string" },
+        "zero_rtt_handshake": { "type": "boolean" },
+        "heartbeat": { "type": "string" },
+        "tls": { "$ref": "#/definitions/tlsInbound" }
       }
     },
     "genericInbound": {
@@ -264,7 +400,7 @@
         "type": {
           "type": "string",
           "not": {
-            "enum": ["anytls", "vless", "trojan", "shadowsocks"]
+            "enum": ["anytls", "vless", "trojan", "shadowsocks", "hysteria2", "tuic"]
           }
         },
         "tag": { "$ref": "#/definitions/tag" }
