@@ -24,7 +24,8 @@ The `singbox` branch adds:
 - a sing-box JSON schema and Monaco editor validation;
 - core-aware config profile creation and editing;
 - core identity and version display for profiles and Nodes;
-- AnyTLS-compatible editing through the sing-box schema;
+- sing-box schema and editor validation for managed AnyTLS, VLESS (incl. Reality), Trojan,
+  Shadowsocks, Hysteria2 and TUIC inbounds, mirroring the backend rules;
 - automatic upstream synchronization and branch validation.
 
 Important implementation areas include:
